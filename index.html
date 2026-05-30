@@ -578,6 +578,8 @@ let customEpsg     = null;   // number or null
 let countriesLoaded = false;
 let hoveredId      = null;
 let selectedId     = null;
+const countryBbox  = new Map();  // id → [w, s, e, n] (kept off the feature
+                                 // because MapLibre serializes properties)
 let precision      = 6;
 let coordLabel     = '';
 let coordType      = 'bbox'; // 'bbox' | 'poly' | 'upload' | 'country'
@@ -751,9 +753,10 @@ function handleCountryClick(e) {
 
   const f = feats[0];
   const name = f.properties.name || ISO_NAMES[f.id] || `Region ${f.id}`;
-  /* Use the precomputed bbox (handles antimeridian wrap). Fallback for
-     uploads / other sources. */
-  const bbox = f.properties._bbox || bboxFromGeometry(f.geometry);
+  /* Look up the bbox from our own Map (MapLibre serializes feature
+     properties through workers, so anything stashed on f.properties
+     comes back as a string). Fallback to live computation if missing. */
+  const bbox = countryBbox.get(f.id) || bboxFromGeometry(f.geometry);
   if (!bbox) return;
 
   /* persist the selected country's face colour */
@@ -818,8 +821,16 @@ async function loadCountries() {
       f.properties = f.properties || {};
       if (!f.properties.name) f.properties.name = ISO_NAMES[f.id] || '';
       unwrapAntimeridian(f.geometry);  // fix Russia/Fiji fill bands across the map
-      f.properties._bbox = bboxFromGeometry(f.geometry);  // tight bbox post-unwrap
+      /* Cache bbox by id — we can't stash it on properties because MapLibre
+         serializes feature properties through workers, turning arrays into
+         strings and breaking the click handler. */
+      countryBbox.set(f.id, bboxFromGeometry(f.geometry));
     });
+    /* Drop Antarctica (ISO 010): its polygon encircles the south pole and
+       the simple walk-and-shift unwrap can't avoid leaving a stray edge
+       across the bottom of the map. Country picking for Antarctica isn't
+       a meaningful workflow anyway. */
+    geojson.features = geojson.features.filter(f => f.id !== 10);
     map.getSource('countries').setData(geojson);
     countriesLoaded = true;
   } catch (_) {
