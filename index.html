@@ -574,6 +574,7 @@ let polyVerts      = [];
 let customEpsg     = null;   // number or null
 let countriesLoaded = false;
 let hoveredId      = null;
+let selectedId     = null;
 let precision      = 6;
 let coordLabel     = '';
 let coordType      = 'bbox'; // 'bbox' | 'poly' | 'upload' | 'country'
@@ -596,16 +597,37 @@ map.on('load', () => {
   map.addSource('countries', { type: 'geojson', data: emptyFC() });
   map.addLayer({
     id: 'countries-fill', type: 'fill', source: 'countries',
+    layout: { visibility: 'none' },
     paint: {
-      'fill-color': '#d29922',
-      'fill-opacity': ['case', ['boolean', ['feature-state', 'hovered'], false], 0.32, 0],
+      'fill-color': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false], '#3fb950',
+        ['boolean', ['feature-state', 'hovered'],  false], '#d29922',
+        '#8b949e'
+      ],
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false], 0.45,
+        ['boolean', ['feature-state', 'hovered'],  false], 0.30,
+        0.05
+      ],
     }
   });
   map.addLayer({
     id: 'countries-line', type: 'line', source: 'countries',
+    layout: { visibility: 'none' },
     paint: {
-      'line-color': '#d29922',
-      'line-width': ['case', ['boolean', ['feature-state', 'hovered'], false], 1.5, 0],
+      'line-color': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false], '#3fb950',
+        '#d29922'
+      ],
+      'line-width': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false], 2,
+        ['boolean', ['feature-state', 'hovered'],  false], 1.5,
+        0.4
+      ],
       'line-opacity': 0.85,
     }
   });
@@ -697,7 +719,8 @@ function handleCountryHover(e) {
 
   if (!feats.length) {
     if (hoveredId !== null) {
-      map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: false });
+      if (hoveredId !== selectedId)
+        map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: false });
       hoveredId = null;
     }
     tooltip.style.display = 'none';
@@ -706,7 +729,7 @@ function handleCountryHover(e) {
 
   const f = feats[0];
   if (f.id !== hoveredId) {
-    if (hoveredId !== null)
+    if (hoveredId !== null && hoveredId !== selectedId)
       map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: false });
     hoveredId = f.id;
     map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: true });
@@ -731,9 +754,14 @@ function handleCountryClick(e) {
   const lngs = coords.map(c => c[0]), lats = coords.map(c => c[1]);
   const bbox = [Math.min(...lngs), Math.min(...lats), Math.max(...lngs), Math.max(...lats)];
 
-  map.getSource('aoi').setData({ type:'FeatureCollection', features:[{
-    type:'Feature', geometry: f.geometry, properties:{}
-  }]});
+  /* persist the selected country's face colour */
+  if (selectedId !== null && selectedId !== f.id)
+    map.setFeatureState({ source:'countries', id: selectedId }, { selected: false });
+  selectedId = f.id;
+  map.setFeatureState({ source:'countries', id: selectedId }, { selected: true, hovered: false });
+
+  /* draw a bbox rectangle (not the country polygon) around the country */
+  map.getSource('aoi').setData(bboxToFC(bbox));
   commitBbox(bbox, name, 'country');
   map.fitBounds([[bbox[0],bbox[1]],[bbox[2],bbox[3]]], { padding:60, maxZoom:8, duration:700 });
 }
@@ -746,6 +774,9 @@ async function loadCountries() {
     const topo = await res.json();
     const geojson = topojson.feature(topo, topo.objects.countries);
     geojson.features.forEach(f => {
+      /* numeric IDs — MapLibre feature-state silently ignores string IDs on
+         GeoJSON sources, which is why hover/selection didn't render before */
+      f.id = Number(f.id);
       f.properties = f.properties || {};
       if (!f.properties.name) f.properties.name = ISO_NAMES[f.id] || '';
     });
@@ -964,6 +995,10 @@ function clearAll() {
   currentBbox = null; coordLabel = '';
   polyVerts = []; bboxAnchor = null;
   deactivateDraw();
+  if (selectedId !== null) {
+    map.setFeatureState({ source:'countries', id: selectedId }, { selected: false, hovered: false });
+    selectedId = null;
+  }
   map.getSource('aoi')?.setData(emptyFC());
   clearPreview();
   document.getElementById('coords-section').classList.remove('visible');
