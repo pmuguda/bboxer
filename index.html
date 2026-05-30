@@ -143,7 +143,21 @@
 
     /* ── Country picker toggle ──────────────── */
     .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .toggle-label { font-size: 12.5px; color: var(--text); font-weight: 500; }
+    .toggle-label { font-size: 12.5px; color: var(--text); font-weight: 500; display:inline-flex; align-items:center; gap:6px; }
+    .info-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 18px; height: 18px; padding: 0; border-radius: 50%;
+      border: none; background: transparent;
+      color: var(--muted); cursor: pointer; transition: color 0.15s;
+    }
+    .info-btn svg { width: 14px; height: 14px; pointer-events: none; }
+    .info-btn:hover, .info-btn.active { color: var(--accent); }
+    .info-popover {
+      margin-top: 8px; padding: 10px 12px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+      font-size: 11.5px; line-height: 1.55; color: var(--muted);
+    }
+    .info-popover[hidden] { display: none; }
     .toggle-switch { position: relative; width: 38px; height: 21px; cursor: pointer; flex-shrink: 0; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
     .toggle-track {
@@ -342,6 +356,24 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── Graticule HTML labels ───────────── */
+    #graticule-labels-html {
+      position: absolute; inset: 0;
+      pointer-events: none; z-index: 5;
+      overflow: hidden;
+    }
+    .graticule-label {
+      position: absolute;
+      font: 10.5px 'SF Mono', 'Fira Code', monospace;
+      color: #c9d1d9;
+      letter-spacing: 0.02em;
+      padding: 1px 4px;
+      background: rgba(13, 17, 23, 0.55);
+      border-radius: 3px;
+      white-space: nowrap;
+      user-select: none;
+    }
+
     /* ── MapLibre overrides ──────────────── */
     .maplibregl-ctrl-attrib { font-size: 10px !important; }
     .maplibregl-canvas { cursor: grab; }
@@ -420,7 +452,16 @@
   <div class="panel-section">
     <div class="section-title">Country Picker</div>
     <div class="toggle-row">
-      <span class="toggle-label">Enable country mode</span>
+      <span class="toggle-label">
+        Enable country mode
+        <button class="info-btn" id="country-info-btn" title="About disputed regions" aria-label="About disputed regions">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="7" r="6"/>
+            <path d="M7 6.5v3.5"/>
+            <circle cx="7" cy="4.2" r="0.7" fill="currentColor" stroke="none"/>
+          </svg>
+        </button>
+      </span>
       <label class="toggle-switch" title="Toggle country picker">
         <input type="checkbox" id="country-toggle">
         <div class="toggle-track"></div>
@@ -428,11 +469,13 @@
       </label>
     </div>
     <p id="country-hint" class="section-hint" style="display:none">Hover to highlight a country · Click to snap a bbox around it</p>
-    <p class="section-hint" style="margin-top:6px;font-size:10.5px;opacity:0.75;line-height:1.5">
+    <div class="info-popover" id="country-info-pop" hidden>
       Disputed regions (Kashmir, Aksai Chin, Western Sahara, Crimea, Golan, N.&nbsp;Cyprus, …) are masked in
       <span style="color:#d96b72">dark red with a dashed border</span>
-      and are <em>not</em> visually assigned to any country. Note: the underlying country bbox here follows Natural Earth's classification and <em>may</em> still extend through disputed areas — verify against your authoritative source before using in official work.
-    </p>
+      and are <em>not</em> visually assigned to any country.
+      <br><br>
+      <strong>Note:</strong> the underlying country bbox follows Natural Earth's territorial classification and <em>may</em> still extend through disputed areas — verify against your authoritative source before using in official work.
+    </div>
   </div>
 
   <!-- Coordinates -->
@@ -706,27 +749,177 @@ map.on('load', () => {
     }
   });
 
+  /* initial graticule + keep it in sync with pan/zoom */
+  regenerateGraticule();
+  map.on('moveend', regenerateGraticule);
+});
+
+/* ─── Dynamic graticule (lat/lon grid + labels) ──────────────────────────── */
+/* Pick a grid spacing in degrees that gives ~6-10 lines across the viewport
+   at the current zoom level. The breakpoints follow the standard 1-2-5
+   sequence so the grid feels predictable as you zoom. */
+function graticuleStep(z) {
+  if (z < 1.2) return 30;
+  if (z < 2.2) return 15;
+  if (z < 3.5) return 10;
+  if (z < 4.8) return 5;
+  if (z < 6.2) return 2;
+  if (z < 7.5) return 1;
+  if (z < 9)   return 0.5;
+  if (z < 10.5) return 0.2;
+  if (z < 12)   return 0.1;
+  if (z < 13.5) return 0.05;
+  return 0.02;
+}
+
+function formatDeg(v, kind) {
+  const abs = Math.abs(v);
+  const decimals = abs < 1 ? 2 : abs < 10 ? 1 : 0;
+  const ref = kind === 'lng' ? (v >= 0 ? 'E' : 'W') : (v >= 0 ? 'N' : 'S');
+  /* Special-case 0 — no hemisphere */
+  if (v === 0) return `0°`;
+  return `${abs.toFixed(decimals)}°${ref}`;
+}
+
+/* Snap a value to the nearest multiple of step, then floor/ceil. Avoids
+   accumulating float drift when stepping in fractional degrees (0.1, 0.05). */
+const snap = (v, step) => Math.round(v / step) * step;
+
+function regenerateGraticule() {
+  const z = map.getZoom();
+  const step = graticuleStep(z);
+  const b = map.getBounds();
+  const w = b.getWest(), e = b.getEast();
+  const s = Math.max(-85, b.getSouth());
+  const n = Math.min( 85, b.getNorth());
+
+  const startLng = snap(w, step) - step;
+  const endLng   = snap(e, step) + step;
+  const startLat = Math.max(-85, snap(s, step) - step);
+  const endLat   = Math.min( 85, snap(n, step) + step);
+
+  /* Major lines every 5 ticks (so e.g. on a 1° grid, 5°/10°/15° pop) */
+  const majorEvery = step * 5;
+  const isMajor = (v) => Math.abs(snap(v, majorEvery) - v) < step / 100;
+
+  const lines = [];
+  const labelData = [];   // for HTML overlay
+
+  /* Vertical lines = constant longitude */
+  for (let lng = startLng; lng <= endLng + 1e-9; lng += step) {
+    const v = +lng.toFixed(6);
+    lines.push({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: [[v, startLat], [v, endLat]] },
+      properties: { major: isMajor(v) },
+    });
+    labelData.push({ kind: 'lng', value: v, text: formatDeg(v, 'lng') });
+  }
+
+  /* Horizontal lines = constant latitude */
+  for (let lat = startLat; lat <= endLat + 1e-9; lat += step) {
+    const v = +lat.toFixed(6);
+    lines.push({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: [[startLng, v], [endLng, v]] },
+      properties: { major: isMajor(v) },
+    });
+    labelData.push({ kind: 'lat', value: v, text: formatDeg(v, 'lat') });
+  }
+
+  if (map.getSource('graticule-lines'))
+    map.getSource('graticule-lines').setData({ type:'FeatureCollection', features: lines });
+
+  renderGraticuleLabelsHTML(labelData);
+}
+
+/* HTML overlay labels — one absolute-positioned div per longitude (along
+   bottom of map) and per latitude (along left edge). Pinned to the
+   viewport edges, not to the world, so they stay visible while panning. */
+function renderGraticuleLabelsHTML(labelData) {
+  let host = document.getElementById('graticule-labels-html');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'graticule-labels-html';
+    document.getElementById('map').appendChild(host);
+  }
+  host.innerHTML = '';
+  const mapEl = document.getElementById('map');
+  const h = mapEl.clientHeight, w = mapEl.clientWidth;
+  const PAD_BOTTOM = 38; // clear the scale bar + attribution row
+  const PAD_LEFT   = 6;
+
+  labelData.forEach(lab => {
+    const el = document.createElement('div');
+    el.className = 'graticule-label';
+    el.textContent = lab.text;
+
+    if (lab.kind === 'lng') {
+      /* Project (lng, equator) and just take x; pin to bottom */
+      const p = map.project([lab.value, 0]);
+      if (p.x < 0 || p.x > w) return;
+      el.style.left = p.x + 'px';
+      el.style.bottom = PAD_BOTTOM + 'px';
+      el.style.transform = 'translateX(-50%)';
+    } else {
+      const p = map.project([0, lab.value]);
+      if (p.y < 0 || p.y > h) return;
+      el.style.top = p.y + 'px';
+      el.style.left = PAD_LEFT + 'px';
+      el.style.transform = 'translateY(-50%)';
+    }
+    host.appendChild(el);
+  });
+}
+
+/* The AOI + preview + graticule layers belong in the original map.on('load')
+   handler. They got separated when this region was edited — re-attach by
+   listening for 'load' again (idempotent: addSource/addLayer throw if the
+   id already exists, so we guard each). */
+map.on('load', () => {
+  /* Graticule lines as GL layer; labels are rendered as HTML overlay
+     (sidesteps glyph-pbf / font-stack issues for the no-labels style). */
+  if (!map.getSource('graticule-lines')) {
+    map.addSource('graticule-lines',  { type: 'geojson', data: emptyFC() });
+    map.addLayer({
+      id: 'graticule-lines', type: 'line', source: 'graticule-lines',
+      paint: {
+        'line-color': '#ffffff',
+        'line-opacity': ['case', ['get', 'major'], 0.13, 0.07],
+        'line-width':   ['case', ['get', 'major'], 0.8,  0.5],
+      }
+    });
+  }
+
   /* drawn AOI */
-  map.addSource('aoi', { type: 'geojson', data: emptyFC() });
-  map.addLayer({
-    id: 'aoi-fill', type: 'fill', source: 'aoi',
-    paint: { 'fill-color': '#3fb950', 'fill-opacity': 0.14 }
-  });
-  map.addLayer({
-    id: 'aoi-line', type: 'line', source: 'aoi',
-    paint: { 'line-color': '#3fb950', 'line-width': 2, 'line-dasharray': [4, 2] }
-  });
+  if (!map.getSource('aoi')) {
+    map.addSource('aoi', { type: 'geojson', data: emptyFC() });
+    map.addLayer({
+      id: 'aoi-fill', type: 'fill', source: 'aoi',
+      paint: { 'fill-color': '#3fb950', 'fill-opacity': 0.14 }
+    });
+    map.addLayer({
+      id: 'aoi-line', type: 'line', source: 'aoi',
+      paint: { 'line-color': '#3fb950', 'line-width': 2, 'line-dasharray': [4, 2] }
+    });
+  }
 
   /* rubber-band preview */
-  map.addSource('preview', { type: 'geojson', data: emptyFC() });
-  map.addLayer({
-    id: 'preview-fill', type: 'fill', source: 'preview',
-    paint: { 'fill-color': '#3fb950', 'fill-opacity': 0.07 }
-  });
-  map.addLayer({
-    id: 'preview-line', type: 'line', source: 'preview',
-    paint: { 'line-color': '#3fb950', 'line-width': 1.5, 'line-dasharray': [2, 2] }
-  });
+  if (!map.getSource('preview')) {
+    map.addSource('preview', { type: 'geojson', data: emptyFC() });
+    map.addLayer({
+      id: 'preview-fill', type: 'fill', source: 'preview',
+      paint: { 'fill-color': '#3fb950', 'fill-opacity': 0.07 }
+    });
+    map.addLayer({
+      id: 'preview-line', type: 'line', source: 'preview',
+      paint: { 'line-color': '#3fb950', 'line-width': 1.5, 'line-dasharray': [2, 2] }
+    });
+  }
+
+  regenerateGraticule();
+  map.off('moveend', regenerateGraticule); // belt-and-suspenders against double-bind
+  map.on('moveend', regenerateGraticule);
 });
 
 /* ─── BBox draw (click-drag) ─────────────────────────────────────────────── */
@@ -792,7 +985,7 @@ function handleCountryHover(e) {
   const feats = map.queryRenderedFeatures(e.point, { layers: ['countries-fill'] });
 
   if (!feats.length) {
-    if (hoveredId !== null) {
+    if (hoveredId != null) {
       if (hoveredId !== selectedId)
         map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: false });
       hoveredId = null;
@@ -802,8 +995,9 @@ function handleCountryHover(e) {
   }
 
   const f = feats[0];
+  if (f.id == null) return;  // defensive — clears the spam of "feature id required" errors
   if (f.id !== hoveredId) {
-    if (hoveredId !== null && hoveredId !== selectedId)
+    if (hoveredId != null && hoveredId !== selectedId)
       map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: false });
     hoveredId = f.id;
     map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: true });
@@ -964,25 +1158,13 @@ function renderPanel() {
 
 /* Build the list of copy formats in the user's chosen axis order.
    - Python list: respects the order toggle.
-   - GDAL -te:    always W,S,E,N — the tool requires that exact order.
    - WKT:         geometric vertex sequence, order toggle doesn't apply. */
 function buildFormats(w, s, e, n, units) {
-  const u = units ? ` ${units}` : '';
-  if (order === 'wesn') {
-    return [
-      { lbl: `Python list  ·  W, E, S, N${units ? '  ('+units+')' : ''}`,
-        val: `[${w}, ${e}, ${s}, ${n}]` },
-      { lbl: 'GDAL  -te  ·  fixed W S E N',
-        val: `-te ${w} ${s} ${e} ${n}` },
-      { lbl: 'WKT BBox polygon',
-        val: `POLYGON((${w} ${s}, ${e} ${s}, ${e} ${n}, ${w} ${n}, ${w} ${s}))` },
-    ];
-  }
+  const orderLbl = order === 'wesn' ? 'W, E, S, N' : 'W, S, E, N';
+  const listVal  = order === 'wesn' ? `[${w}, ${e}, ${s}, ${n}]` : `[${w}, ${s}, ${e}, ${n}]`;
   return [
-    { lbl: `Python list  ·  W, S, E, N${units ? '  ('+units+')' : ''}`,
-      val: `[${w}, ${s}, ${e}, ${n}]` },
-    { lbl: 'GDAL  -te',
-      val: `-te ${w} ${s} ${e} ${n}` },
+    { lbl: `Python list  ·  ${orderLbl}${units ? '  ('+units+')' : ''}`,
+      val: listVal },
     { lbl: 'WKT BBox polygon',
       val: `POLYGON((${w} ${s}, ${e} ${s}, ${e} ${n}, ${w} ${n}, ${w} ${s}))` },
   ];
@@ -1121,6 +1303,16 @@ document.querySelectorAll('.order-pill').forEach(btn => {
       b.classList.toggle('active', b.dataset.order === order));
     if (currentBbox) renderPanel();
   });
+});
+
+/* Info button toggles the disputed-regions popover */
+document.getElementById('country-info-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const pop = document.getElementById('country-info-pop');
+  const btn = document.getElementById('country-info-btn');
+  const open = pop.hasAttribute('hidden');
+  pop.toggleAttribute('hidden', !open);
+  btn.classList.toggle('active', open);
 });
 
 /* ─── Draw mode management ───────────────────────────────────────────────── */
