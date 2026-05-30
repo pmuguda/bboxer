@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BBoxer — AOI Coordinate Copier</title>
+  <meta name="description" content="Draw, snap & instantly copy bounding-box coordinates in any EPSG. Supports bbox draw, polygon draw, GeoJSON upload, and country picker.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css"
+        crossorigin="anonymous">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --accent:   #3fb950;
+      --amber:    #d29922;
+      --red:      #f85149;
+      --sidebar-w: 308px;
+    }
+
+    html, body { height: 100%; width: 100%; overflow: hidden; }
+    body {
+      display: flex;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    /* ── Sidebar ───────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      z-index: 10;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+      transition: width 0.28s ease, min-width 0.28s ease;
+    }
+    #sidebar::-webkit-scrollbar { width: 4px; }
+    #sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    body.sidebar-collapsed #sidebar {
+      width: 0; min-width: 0; overflow: hidden; border-right: none;
+    }
+
+    /* ── Map ────────────────────────────────── */
+    #map { flex: 1; height: 100vh; }
+
+    /* ── Header ─────────────────────────────── */
+    .sidebar-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .logo-mark {
+      width: 40px; height: 40px; border-radius: 9px;
+      background: linear-gradient(135deg, #3fb950 0%, #d29922 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 11px; letter-spacing: 0.4px;
+      color: #000; flex-shrink: 0; user-select: none;
+    }
+    .sidebar-header h1 { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .sidebar-header p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Panel sections ─────────────────────── */
+    .panel-section {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-title {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.09em;
+      color: var(--muted); margin-bottom: 10px;
+    }
+    .section-hint { font-size: 12px; color: var(--muted); line-height: 1.55; }
+
+    /* ── CRS ────────────────────────────────── */
+    .crs-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+    }
+    .epsg-badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 9px; border-radius: 5px;
+      background: rgba(63,185,80,0.1);
+      border: 1px solid rgba(63,185,80,0.3);
+      color: var(--accent); font-size: 11.5px; font-weight: 700;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .crs-arrow { color: var(--muted); font-size: 13px; }
+    .epsg-input-wrap { display: flex; align-items: center; gap: 4px; }
+    .epsg-prefix { font-size: 11px; color: var(--muted); font-family: monospace; }
+    #custom-epsg {
+      width: 76px; padding: 4px 8px;
+      border-radius: 5px; border: 1.5px solid var(--border);
+      background: var(--bg); color: var(--text);
+      font-size: 12px; font-family: monospace;
+      transition: border-color 0.15s;
+    }
+    #custom-epsg:focus { outline: none; border-color: var(--accent); }
+    #custom-epsg::placeholder { color: var(--muted); }
+    #epsg-status { font-size: 11px; min-height: 15px; }
+    #epsg-status.ok  { color: var(--accent); }
+    #epsg-status.err { color: var(--red); }
+    #epsg-status.loading { color: var(--muted); font-style: italic; }
+
+    /* ── Tool grid ──────────────────────────── */
+    .tool-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px; margin-bottom: 8px;
+    }
+    .tool-btn, .upload-label {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      padding: 9px 4px; border-radius: 7px;
+      border: 1.5px solid var(--border);
+      background: var(--bg); color: var(--muted);
+      font-size: 10.5px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s; text-align: center; line-height: 1.2;
+      user-select: none;
+    }
+    .tool-btn svg, .upload-label svg { width: 18px; height: 18px; }
+    .tool-btn:hover  { border-color: var(--accent); color: var(--accent); background: rgba(63,185,80,0.06); }
+    .upload-label:hover { border-color: var(--amber); color: var(--amber); background: rgba(210,153,34,0.06); }
+    .tool-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(63,185,80,0.12); box-shadow: 0 0 0 3px rgba(63,185,80,0.15); }
+    .clear-btn {
+      width: 100%; padding: 7px; border-radius: 6px;
+      border: 1.5px solid var(--border);
+      background: transparent; color: var(--muted);
+      font-size: 11.5px; cursor: pointer; transition: all 0.15s;
+    }
+    .clear-btn:hover { border-color: var(--red); color: var(--red); background: rgba(248,81,73,0.06); }
+
+    /* ── Country picker toggle ──────────────── */
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .toggle-label { font-size: 12.5px; color: var(--text); font-weight: 500; }
+    .toggle-switch { position: relative; width: 38px; height: 21px; cursor: pointer; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0; border-radius: 11px;
+      background: var(--border); transition: background 0.2s;
+    }
+    .toggle-thumb {
+      position: absolute; width: 15px; height: 15px; border-radius: 50%;
+      background: var(--muted); top: 3px; left: 3px;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-switch input:checked ~ .toggle-track { background: rgba(63,185,80,0.35); }
+    .toggle-switch input:checked ~ .toggle-thumb { transform: translateX(17px); background: var(--accent); }
+    #country-hint { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+    /* ── Coordinates section ────────────────── */
+    #coords-section { display: none; }
+    #coords-section.visible { display: block; }
+
+    .coord-meta {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 10px; flex-wrap: wrap;
+    }
+    .coord-type-icon { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
+    .coord-source-text { font-size: 11.5px; color: var(--muted); }
+    .coord-source-text strong { color: var(--text); font-weight: 600; max-width: 160px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+
+    .precision-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    }
+    .precision-row label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    #precision-slider { flex: 1; accent-color: var(--accent); cursor: pointer; }
+    .precision-val { font-size: 11px; color: var(--accent); font-family: monospace; min-width: 10px; }
+
+    .format-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 7px; padding: 9px 11px; margin-bottom: 5px;
+    }
+    .format-label {
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.09em; color: var(--muted); margin-bottom: 5px;
+    }
+    .format-value-row { display: flex; align-items: flex-start; gap: 6px; }
+    .format-value {
+      flex: 1; font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text); word-break: break-all; line-height: 1.55;
+    }
+    .copy-btn {
+      flex-shrink: 0; display: flex; align-items: center; gap: 3px;
+      padding: 3px 8px; border-radius: 5px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      font-size: 10px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .copy-btn svg { width: 10px; height: 10px; }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(63,185,80,0.06); }
+    .copy-btn.copied { border-color: var(--accent); color: var(--accent); background: rgba(63,185,80,0.1); }
+
+    /* ── Transformed section ─────────────────── */
+    #transformed-section { display: none; margin-top: 10px; }
+    #transformed-section.visible { display: block; }
+    .transform-header {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+      font-size: 10px; color: var(--muted);
+    }
+    .crs-chip {
+      padding: 2px 7px; border-radius: 4px;
+      background: rgba(210,153,34,0.1); border: 1px solid rgba(210,153,34,0.3);
+      color: var(--amber); font-size: 10.5px; font-weight: 700; font-family: monospace;
+    }
+
+    /* ── Footer ──────────────────────────────── */
+    .sidebar-footer {
+      margin-top: auto; padding: 12px 16px;
+      font-size: 11px; color: var(--muted);
+      border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .sidebar-footer a { color: var(--accent); text-decoration: none; }
+    .sidebar-footer a:hover { text-decoration: underline; }
+    .kofi-btn {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 8px 12px; margin-bottom: 10px; border-radius: 8px;
+      background: linear-gradient(135deg, #3fb950, #d29922);
+      color: #000 !important; font-size: 12px; font-weight: 700;
+      text-decoration: none !important; transition: opacity 0.15s, transform 0.1s;
+    }
+    .kofi-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .kofi-btn svg { width: 14px; height: 14px; }
+
+    /* ── Sidebar toggle tab ────────────────── */
+    #sidebar-toggle {
+      position: fixed; left: var(--sidebar-w); top: 50%;
+      transform: translateY(-50%);
+      z-index: 30; width: 16px; height: 48px; padding: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: none; border-radius: 0 8px 8px 0;
+      color: var(--muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: left 0.28s ease, color 0.15s;
+    }
+    #sidebar-toggle:hover { color: var(--text); }
+    #sidebar-toggle svg { width: 10px; height: 10px; transition: transform 0.28s; }
+    body.sidebar-collapsed #sidebar-toggle { left: 0; }
+    body.sidebar-collapsed #sidebar-toggle svg { transform: rotate(180deg); }
+
+    /* ── Floating AOI toolbar ─────────────── */
+    #aoi-toolbar {
+      position: fixed; top: 14px; right: 16px; z-index: 20;
+      display: flex; align-items: center; gap: 1px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 9px; padding: 3px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.55);
+    }
+    .tb-btn {
+      width: 30px; height: 30px; border-radius: 6px;
+      border: 1.5px solid transparent; background: transparent;
+      color: var(--muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .tb-btn svg { width: 15px; height: 15px; pointer-events: none; }
+    .tb-btn:hover        { color: var(--accent); background: rgba(63,185,80,0.08); border-color: rgba(63,185,80,0.35); }
+    .tb-btn.active       { color: var(--accent); background: rgba(63,185,80,0.12); border-color: var(--accent); box-shadow: 0 0 0 2px rgba(63,185,80,0.18); }
+    .tb-btn.country-on   { color: var(--amber);  background: rgba(210,153,34,0.12); border-color: var(--amber); }
+    .tb-btn.country-on:hover { color: var(--amber); background: rgba(210,153,34,0.18); border-color: var(--amber); }
+    .tb-btn.tb-clear:hover   { color: var(--red); background: rgba(248,81,73,0.08); border-color: rgba(248,81,73,0.35); }
+    .tb-divider { width: 1px; height: 16px; background: var(--border); margin: 0 2px; }
+
+    /* ── Hint banner ──────────────────────── */
+    #hint-banner {
+      position: fixed; bottom: 28px;
+      left: calc(var(--sidebar-w) + 50%); transform: translateX(-50%);
+      background: rgba(13,17,23,0.93); border: 1px solid var(--border);
+      color: var(--text); font-size: 12px; padding: 8px 18px;
+      border-radius: 20px; backdrop-filter: blur(10px);
+      z-index: 100; pointer-events: none; white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    #hint-banner.visible { opacity: 1; }
+    body.sidebar-collapsed #hint-banner { left: 50%; }
+
+    /* ── Country tooltip ─────────────────── */
+    #country-tooltip {
+      position: fixed; z-index: 50; pointer-events: none;
+      background: rgba(13,17,23,0.93); border: 1px solid var(--amber);
+      padding: 5px 11px; border-radius: 6px;
+      font-size: 12px; font-weight: 600; color: var(--text);
+      backdrop-filter: blur(6px); display: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+
+    /* ── Loader ─────────────────────────── */
+    #loader {
+      position: fixed; top: 14px; left: calc(var(--sidebar-w) + 14px);
+      background: rgba(13,17,23,0.93); border: 1px solid var(--border);
+      color: var(--text); font-size: 12px; padding: 7px 14px;
+      border-radius: 7px; display: none; align-items: center; gap: 8px;
+      z-index: 200; backdrop-filter: blur(8px);
+      transition: left 0.28s;
+    }
+    #loader.visible { display: flex; }
+    body.sidebar-collapsed #loader { left: 24px; }
+    .spinner {
+      width: 13px; height: 13px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MapLibre overrides ──────────────── */
+    .maplibregl-ctrl-attrib { font-size: 10px !important; }
+    .maplibregl-canvas { cursor: grab; }
+    .maplibregl-canvas:active { cursor: grabbing; }
+    body.mode-draw .maplibregl-canvas    { cursor: crosshair !important; }
+    body.mode-country .maplibregl-canvas { cursor: pointer !important; }
+    .maplibregl-ctrl-group { background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; }
+    .maplibregl-ctrl-group button { color: var(--muted) !important; }
+    .maplibregl-ctrl-group button:hover { background: rgba(255,255,255,0.07) !important; color: var(--text) !important; }
+    .maplibregl-ctrl-scale { background: var(--surface) !important; border-color: var(--border) !important; color: var(--muted) !important; font-size: 10px !important; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ SIDEBAR ═══════════════════════════════ -->
+<aside id="sidebar">
+  <header class="sidebar-header">
+    <div class="logo-mark">BB</div>
+    <div>
+      <h1>BBoxer</h1>
+      <p>Draw, snap &amp; copy AOI coordinates</p>
+    </div>
+  </header>
+
+  <!-- CRS -->
+  <div class="panel-section">
+    <div class="section-title">Coordinate Reference System</div>
+    <div class="crs-row">
+      <span class="epsg-badge">EPSG:4326</span>
+      <span class="crs-arrow">→</span>
+      <div class="epsg-input-wrap">
+        <span class="epsg-prefix">EPSG:</span>
+        <input type="text" id="custom-epsg" placeholder="32633" maxlength="6" title="Type an EPSG code to transform coordinates">
+      </div>
+    </div>
+    <div id="epsg-status"></div>
+  </div>
+
+  <!-- Draw -->
+  <div class="panel-section">
+    <div class="section-title">Draw Tools</div>
+    <div class="tool-grid">
+
+      <button class="tool-btn" id="btn-bbox" title="Draw bounding box (click-drag)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="14" height="14" rx="1"/>
+          <circle cx="3" cy="3" r="1.6" fill="currentColor" stroke="none"/>
+          <circle cx="17" cy="3" r="1.6" fill="currentColor" stroke="none"/>
+          <circle cx="3" cy="17" r="1.6" fill="currentColor" stroke="none"/>
+          <circle cx="17" cy="17" r="1.6" fill="currentColor" stroke="none"/>
+        </svg>
+        BBox
+      </button>
+
+      <button class="tool-btn" id="btn-poly" title="Draw polygon (click vertices, double-click to close)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="10,2 18,8 15,17 5,17 2,8"/>
+        </svg>
+        Polygon
+      </button>
+
+      <label class="upload-label" title="Upload GeoJSON file">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13V3M6 9l4-6 4 6"/><path d="M3 16h14"/>
+        </svg>
+        Upload
+        <input type="file" id="upload-geojson" accept=".geojson,.json" hidden>
+      </label>
+
+    </div>
+    <button class="clear-btn" id="btn-clear">✕  Clear all</button>
+  </div>
+
+  <!-- Country Picker -->
+  <div class="panel-section">
+    <div class="section-title">Country Picker</div>
+    <div class="toggle-row">
+      <span class="toggle-label">Enable country mode</span>
+      <label class="toggle-switch" title="Toggle country picker">
+        <input type="checkbox" id="country-toggle">
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+    <p id="country-hint" class="section-hint" style="display:none">Hover to highlight a country · Click to snap a bbox around it</p>
+  </div>
+
+  <!-- Coordinates -->
+  <div class="panel-section" id="coords-section">
+    <div class="section-title">Coordinates</div>
+
+    <div class="coord-meta">
+      <svg class="coord-type-icon" id="coord-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="1" y="1" width="12" height="12" rx="1.5"/>
+      </svg>
+      <span class="coord-source-text">Source: <strong id="coord-source-label">—</strong></span>
+    </div>
+
+    <div class="precision-row">
+      <label for="precision-slider">Precision</label>
+      <input type="range" id="precision-slider" min="0" max="8" value="6">
+      <span class="precision-val" id="precision-val">6</span>
+    </div>
+
+    <div id="format-list"></div>
+
+    <div id="transformed-section">
+      <div class="transform-header">
+        <span>Transformed →</span>
+        <span class="crs-chip" id="tx-chip">EPSG:—</span>
+      </div>
+      <div id="format-list-tx"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="sidebar-footer">
+    <a class="kofi-btn" href="https://ko-fi.com/pavan_muguda" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 8h13v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8z"/>
+        <path d="M17 9h2.5a2.5 2.5 0 0 1 0 5H17"/>
+        <path d="M7 3v2M11 3v2"/>
+      </svg>
+      Buy me a coffee
+    </a>
+    <span>Made by <a href="https://pmuguda.github.io" target="_blank" rel="noopener">Pavan Muguda</a></span>
+  </footer>
+</aside>
+
+<!-- Sidebar toggle -->
+<button id="sidebar-toggle" title="Toggle sidebar" aria-label="Toggle sidebar">
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+    <path d="M10 3L5 8l5 5"/>
+  </svg>
+</button>
+
+<!-- ══════════════════════════════════ MAP ══════════════════════════════════ -->
+<div id="map"></div>
+
+<!-- Floating AOI toolbar -->
+<div id="aoi-toolbar">
+
+  <button class="tb-btn" id="tb-bbox" title="Draw BBox">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="14" height="14" rx="1"/>
+      <circle cx="3" cy="3" r="1.6" fill="currentColor" stroke="none"/>
+      <circle cx="17" cy="3" r="1.6" fill="currentColor" stroke="none"/>
+      <circle cx="3" cy="17" r="1.6" fill="currentColor" stroke="none"/>
+      <circle cx="17" cy="17" r="1.6" fill="currentColor" stroke="none"/>
+    </svg>
+  </button>
+
+  <button class="tb-btn" id="tb-poly" title="Draw Polygon">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="10,2 18,8 15,17 5,17 2,8"/>
+    </svg>
+  </button>
+
+  <div class="tb-divider"></div>
+
+  <label class="tb-btn" title="Upload GeoJSON" style="cursor:pointer">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 13V3M6 9l4-6 4 6"/><path d="M3 16h14"/>
+    </svg>
+    <input type="file" id="tb-upload" accept=".geojson,.json" hidden>
+  </label>
+
+  <div class="tb-divider"></div>
+
+  <button class="tb-btn" id="tb-country" title="Country Picker">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="10" cy="10" r="8"/>
+      <path d="M2 10h16"/>
+      <path d="M10 2a14 14 0 010 16"/>
+      <path d="M10 2a14 14 0 000 16"/>
+    </svg>
+  </button>
+
+  <div class="tb-divider"></div>
+
+  <button class="tb-btn tb-clear" id="tb-clear" title="Clear all">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M5 5l10 10M15 5L5 15"/>
+    </svg>
+  </button>
+
+</div>
+
+<!-- Hint banner -->
+<div id="hint-banner"></div>
+
+<!-- Country tooltip -->
+<div id="country-tooltip"></div>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="spinner"></div>
+  <span id="loader-text">Loading…</span>
+</div>
+
+<!-- ═══════════════════════════════ SCRIPTS ════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.15.0/dist/proj4.js"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"
+        crossorigin="anonymous"></script>
+<script>
+'use strict';
+
+/* ─── ISO 3166-1 numeric → country name (world-atlas 110m) ─────────────── */
+const ISO_NAMES = {
+  4:'Afghanistan',8:'Albania',12:'Algeria',24:'Angola',32:'Argentina',
+  36:'Australia',40:'Austria',50:'Bangladesh',56:'Belgium',64:'Bhutan',
+  68:'Bolivia',70:'Bosnia & Herz.',72:'Botswana',76:'Brazil',84:'Belize',
+  100:'Bulgaria',104:'Myanmar',108:'Burundi',112:'Belarus',116:'Cambodia',
+  120:'Cameroon',124:'Canada',140:'Central African Rep.',144:'Sri Lanka',
+  148:'Chad',152:'Chile',156:'China',170:'Colombia',174:'Comoros',
+  178:'Congo',180:'Dem. Rep. Congo',188:'Costa Rica',191:'Croatia',
+  192:'Cuba',196:'Cyprus',203:'Czechia',204:'Benin',208:'Denmark',
+  214:'Dominican Rep.',218:'Ecuador',222:'El Salvador',226:'Eq. Guinea',
+  231:'Ethiopia',232:'Eritrea',233:'Estonia',238:'Falkland Is.',
+  242:'Fiji',246:'Finland',250:'France',266:'Gabon',276:'Germany',
+  288:'Ghana',300:'Greece',304:'Greenland',320:'Guatemala',324:'Guinea',
+  328:'Guyana',332:'Haiti',340:'Honduras',348:'Hungary',352:'Iceland',
+  356:'India',360:'Indonesia',364:'Iran',368:'Iraq',372:'Ireland',
+  376:'Israel',380:'Italy',388:'Jamaica',392:'Japan',398:'Kazakhstan',
+  400:'Jordan',404:'Kenya',408:'North Korea',410:'South Korea',414:'Kuwait',
+  418:'Laos',422:'Lebanon',426:'Lesotho',428:'Latvia',430:'Liberia',
+  434:'Libya',440:'Lithuania',450:'Madagascar',454:'Malawi',458:'Malaysia',
+  462:'Maldives',466:'Mali',470:'Malta',478:'Mauritania',484:'Mexico',
+  496:'Mongolia',498:'Moldova',499:'Montenegro',504:'Morocco',
+  508:'Mozambique',516:'Namibia',524:'Nepal',528:'Netherlands',
+  540:'New Caledonia',554:'New Zealand',558:'Nicaragua',562:'Niger',
+  566:'Nigeria',578:'Norway',586:'Pakistan',591:'Panama',
+  598:'Papua New Guinea',600:'Paraguay',604:'Peru',608:'Philippines',
+  616:'Poland',620:'Portugal',624:'Guinea-Bissau',630:'Puerto Rico',
+  634:'Qatar',642:'Romania',643:'Russia',646:'Rwanda',682:'Saudi Arabia',
+  686:'Senegal',688:'Serbia',694:'Sierra Leone',702:'Singapore',
+  703:'Slovakia',705:'Slovenia',706:'Somalia',710:'South Africa',
+  716:'Zimbabwe',724:'Spain',728:'South Sudan',729:'Sudan',740:'Suriname',
+  748:'Eswatini',752:'Sweden',756:'Switzerland',760:'Syria',764:'Thailand',
+  768:'Togo',780:'Trinidad & Tobago',788:'Tunisia',792:'Turkey',
+  800:'Uganda',804:'Ukraine',784:'UAE',807:'North Macedonia',
+  818:'Egypt',826:'United Kingdom',840:'United States',858:'Uruguay',
+  860:'Uzbekistan',862:'Venezuela',704:'Vietnam',887:'Yemen',
+  894:'Zambia',384:'Côte d\'Ivoire',854:'Burkina Faso',90:'Solomon Is.',
+  548:'Vanuatu',344:'Hong Kong',446:'Macao',860:'Uzbekistan',
+};
+
+/* ─── State ─────────────────────────────────────────────────────────────── */
+let currentBbox    = null;   // [minLng, minLat, maxLng, maxLat]
+let drawMode       = null;   // 'bbox' | 'poly' | null
+let countryMode    = false;
+let bboxAnchor     = null;   // {lng, lat} — first click in bbox mode
+let polyVerts      = [];
+let customEpsg     = null;   // number or null
+let countriesLoaded = false;
+let hoveredId      = null;
+let precision      = 6;
+let coordLabel     = '';
+let coordType      = 'bbox'; // 'bbox' | 'poly' | 'upload' | 'country'
+
+/* ─── Map init ───────────────────────────────────────────────────────────── */
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json',
+  center: [10, 20],
+  zoom: 1.8,
+  minZoom: 0.5,
+});
+
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-left');
+
+/* ─── Add data layers on load ────────────────────────────────────────────── */
+map.on('load', () => {
+  /* countries (loaded lazily) */
+  map.addSource('countries', { type: 'geojson', data: emptyFC() });
+  map.addLayer({
+    id: 'countries-fill', type: 'fill', source: 'countries',
+    paint: {
+      'fill-color': '#d29922',
+      'fill-opacity': ['case', ['boolean', ['feature-state', 'hovered'], false], 0.32, 0],
+    }
+  });
+  map.addLayer({
+    id: 'countries-line', type: 'line', source: 'countries',
+    paint: {
+      'line-color': '#d29922',
+      'line-width': ['case', ['boolean', ['feature-state', 'hovered'], false], 1.5, 0],
+      'line-opacity': 0.85,
+    }
+  });
+
+  /* drawn AOI */
+  map.addSource('aoi', { type: 'geojson', data: emptyFC() });
+  map.addLayer({
+    id: 'aoi-fill', type: 'fill', source: 'aoi',
+    paint: { 'fill-color': '#3fb950', 'fill-opacity': 0.14 }
+  });
+  map.addLayer({
+    id: 'aoi-line', type: 'line', source: 'aoi',
+    paint: { 'line-color': '#3fb950', 'line-width': 2, 'line-dasharray': [4, 2] }
+  });
+
+  /* rubber-band preview */
+  map.addSource('preview', { type: 'geojson', data: emptyFC() });
+  map.addLayer({
+    id: 'preview-fill', type: 'fill', source: 'preview',
+    paint: { 'fill-color': '#3fb950', 'fill-opacity': 0.07 }
+  });
+  map.addLayer({
+    id: 'preview-line', type: 'line', source: 'preview',
+    paint: { 'line-color': '#3fb950', 'line-width': 1.5, 'line-dasharray': [2, 2] }
+  });
+});
+
+/* ─── BBox draw (click-drag) ─────────────────────────────────────────────── */
+map.on('mousedown', (e) => {
+  if (drawMode !== 'bbox') return;
+  e.preventDefault();
+  bboxAnchor = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+});
+
+map.on('mousemove', (e) => {
+  /* bbox drag preview */
+  if (drawMode === 'bbox' && bboxAnchor) {
+    setPreview(bboxToFC(toBbox(bboxAnchor.lng, bboxAnchor.lat, e.lngLat.lng, e.lngLat.lat)));
+    return;
+  }
+  /* polygon rubber-band */
+  if (drawMode === 'poly' && polyVerts.length > 0) {
+    const pts = [...polyVerts, [e.lngLat.lng, e.lngLat.lat], polyVerts[0]];
+    setPreview({ type:'FeatureCollection', features:[{
+      type:'Feature', geometry:{ type:'LineString', coordinates: pts }, properties:{}
+    }]});
+  }
+  /* country hover */
+  if (countryMode) handleCountryHover(e);
+});
+
+map.on('mouseup', (e) => {
+  if (drawMode !== 'bbox' || !bboxAnchor) return;
+  const bbox = toBbox(bboxAnchor.lng, bboxAnchor.lat, e.lngLat.lng, e.lngLat.lat);
+  bboxAnchor = null;
+  clearPreview();
+  if (Math.abs(bbox[2]-bbox[0]) < 0.001 && Math.abs(bbox[3]-bbox[1]) < 0.001) return;
+  map.getSource('aoi').setData(bboxToFC(bbox));
+  commitBbox(bbox, 'Drawn BBox', 'bbox');
+  deactivateDraw();
+});
+
+/* ─── Polygon draw ───────────────────────────────────────────────────────── */
+map.on('click', (e) => {
+  if (countryMode) { handleCountryClick(e); return; }
+  if (drawMode !== 'poly') return;
+  polyVerts.push([e.lngLat.lng, e.lngLat.lat]);
+});
+
+map.on('dblclick', (e) => {
+  if (drawMode !== 'poly' || polyVerts.length < 3) return;
+  e.preventDefault();
+  const verts = [...polyVerts];
+  polyVerts = [];
+  clearPreview();
+  const fc = { type:'FeatureCollection', features:[{
+    type:'Feature', geometry:{ type:'Polygon', coordinates:[[...verts, verts[0]]] }, properties:{}
+  }]};
+  map.getSource('aoi').setData(fc);
+  const lngs = verts.map(v => v[0]), lats = verts.map(v => v[1]);
+  commitBbox([Math.min(...lngs),Math.min(...lats),Math.max(...lngs),Math.max(...lats)], 'Drawn Polygon', 'poly');
+  deactivateDraw();
+});
+
+/* ─── Country picker ─────────────────────────────────────────────────────── */
+function handleCountryHover(e) {
+  const tooltip = document.getElementById('country-tooltip');
+  const feats = map.queryRenderedFeatures(e.point, { layers: ['countries-fill'] });
+
+  if (!feats.length) {
+    if (hoveredId !== null) {
+      map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: false });
+      hoveredId = null;
+    }
+    tooltip.style.display = 'none';
+    return;
+  }
+
+  const f = feats[0];
+  if (f.id !== hoveredId) {
+    if (hoveredId !== null)
+      map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: false });
+    hoveredId = f.id;
+    map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: true });
+  }
+
+  const name = f.properties.name || ISO_NAMES[f.id] || `Region ${f.id}`;
+  tooltip.textContent = name;
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.originalEvent.clientX + 14) + 'px';
+  tooltip.style.top  = (e.originalEvent.clientY - 32) + 'px';
+}
+
+function handleCountryClick(e) {
+  const feats = map.queryRenderedFeatures(e.point, { layers: ['countries-fill'] });
+  if (!feats.length) return;
+
+  const f = feats[0];
+  const name = f.properties.name || ISO_NAMES[f.id] || `Region ${f.id}`;
+  const coords = flatCoords(f.geometry);
+  if (!coords.length) return;
+
+  const lngs = coords.map(c => c[0]), lats = coords.map(c => c[1]);
+  const bbox = [Math.min(...lngs), Math.min(...lats), Math.max(...lngs), Math.max(...lats)];
+
+  map.getSource('aoi').setData({ type:'FeatureCollection', features:[{
+    type:'Feature', geometry: f.geometry, properties:{}
+  }]});
+  commitBbox(bbox, name, 'country');
+  map.fitBounds([[bbox[0],bbox[1]],[bbox[2],bbox[3]]], { padding:60, maxZoom:8, duration:700 });
+}
+
+async function loadCountries() {
+  if (countriesLoaded) return;
+  showLoader('Loading countries…');
+  try {
+    const res = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+    const topo = await res.json();
+    const geojson = topojson.feature(topo, topo.objects.countries);
+    geojson.features.forEach(f => {
+      f.properties = f.properties || {};
+      if (!f.properties.name) f.properties.name = ISO_NAMES[f.id] || '';
+    });
+    map.getSource('countries').setData(geojson);
+    countriesLoaded = true;
+  } catch (_) {
+    showHint('Failed to load country data — check your connection', 4000);
+  }
+  hideLoader();
+}
+
+/* ─── Commit bbox & render panel ─────────────────────────────────────────── */
+function commitBbox(bbox, label, type) {
+  currentBbox = bbox;
+  coordLabel  = label;
+  coordType   = type;
+  renderPanel();
+  document.getElementById('coords-section').classList.add('visible');
+}
+
+function renderPanel() {
+  if (!currentBbox) return;
+  const p = precision;
+  const [w, s, e, n] = currentBbox.map(v => +v.toFixed(p));
+
+  /* source label + icon */
+  document.getElementById('coord-source-label').textContent = coordLabel;
+  const iconEl = document.getElementById('coord-icon');
+  iconEl.innerHTML = coordType === 'country'
+    ? '<circle cx="7" cy="7" r="6"/><path d="M1 7h12"/><path d="M7 1a10 10 0 010 12"/><path d="M7 1a10 10 0 000 12"/>'
+    : coordType === 'poly'
+    ? '<polygon points="7,1 13,5 11,12 3,12 1,5"/>'
+    : '<rect x="1" y="1" width="12" height="12" rx="1.5"/>';
+
+  const formats = [
+    { lbl:'Array  [W, S, E, N]',   val:`[${w}, ${s}, ${e}, ${n}]` },
+    { lbl:'CSV  W,S,E,N',           val:`${w},${s},${e},${n}` },
+    { lbl:'Python list',            val:`[${w}, ${s}, ${e}, ${n}]` },
+    { lbl:'GDAL  -te',              val:`-te ${w} ${s} ${e} ${n}` },
+    { lbl:'WKT BBox polygon',       val:`POLYGON((${w} ${s}, ${e} ${s}, ${e} ${n}, ${w} ${n}, ${w} ${s}))` },
+  ];
+  renderFormatList('format-list', formats);
+
+  /* transformed */
+  if (customEpsg && proj4.defs[`EPSG:${customEpsg}`]) {
+    renderTransformed(w, s, e, n);
+  } else {
+    document.getElementById('transformed-section').classList.remove('visible');
+  }
+}
+
+function renderFormatList(containerId, formats) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  formats.forEach(f => el.appendChild(makeCard(f.lbl, f.val)));
+}
+
+function renderTransformed(w, s, e, n) {
+  const from = 'EPSG:4326', to = `EPSG:${customEpsg}`;
+  try {
+    const pts = [[w,s],[e,s],[e,n],[w,n]].map(p => proj4(from, to, p));
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const p = precision;
+    const tw = +Math.min(...xs).toFixed(p), ts = +Math.min(...ys).toFixed(p);
+    const te = +Math.max(...xs).toFixed(p), tn = +Math.max(...ys).toFixed(p);
+
+    document.getElementById('tx-chip').textContent = `EPSG:${customEpsg}`;
+    const formats = [
+      { lbl:'Array  [W, S, E, N]', val:`[${tw}, ${ts}, ${te}, ${tn}]` },
+      { lbl:'CSV  W,S,E,N',         val:`${tw},${ts},${te},${tn}` },
+      { lbl:'GDAL  -te',            val:`-te ${tw} ${ts} ${te} ${tn}` },
+    ];
+    renderFormatList('format-list-tx', formats);
+    document.getElementById('transformed-section').classList.add('visible');
+  } catch (_) {
+    document.getElementById('transformed-section').classList.remove('visible');
+  }
+}
+
+function makeCard(label, value) {
+  const div = document.createElement('div');
+  div.className = 'format-card';
+  div.innerHTML = `
+    <div class="format-label">${label}</div>
+    <div class="format-value-row">
+      <div class="format-value">${escHtml(value)}</div>
+      <button class="copy-btn" title="Copy to clipboard">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <rect x="5" y="5" width="8" height="9" rx="1"/>
+          <path d="M3 11V3a1 1 0 011-1h7"/>
+        </svg>
+        Copy
+      </button>
+    </div>`;
+  div.querySelector('.copy-btn').addEventListener('click', () => {
+    copyText(value, div.querySelector('.copy-btn'));
+  });
+  return div;
+}
+
+/* ─── EPSG custom transform ──────────────────────────────────────────────── */
+let epsgTimer = null;
+
+document.getElementById('custom-epsg').addEventListener('input', (e) => {
+  clearTimeout(epsgTimer);
+  const val = e.target.value.trim();
+  const status = document.getElementById('epsg-status');
+
+  if (!val) {
+    customEpsg = null;
+    status.textContent = '';
+    status.className = '';
+    document.getElementById('transformed-section').classList.remove('visible');
+    return;
+  }
+
+  const code = parseInt(val);
+  if (isNaN(code) || code < 1 || code > 999999) {
+    status.textContent = 'Enter a valid numeric EPSG code';
+    status.className = 'err'; return;
+  }
+  if (code === 4326) {
+    status.textContent = 'Source is already EPSG:4326';
+    status.className = 'err'; return;
+  }
+
+  status.textContent = 'Looking up…';
+  status.className = 'loading';
+
+  epsgTimer = setTimeout(async () => {
+    /* already known to proj4? */
+    if (proj4.defs[`EPSG:${code}`]) {
+      customEpsg = code;
+      status.textContent = `✓ EPSG:${code}`;
+      status.className = 'ok';
+      if (currentBbox) renderPanel();
+      return;
+    }
+    /* fetch from epsg.io */
+    try {
+      const res = await fetch(`https://epsg.io/${code}.proj4`);
+      if (!res.ok) throw new Error();
+      const def = (await res.text()).trim();
+      if (!def || def.startsWith('<')) throw new Error();
+      proj4.defs(`EPSG:${code}`, def);
+      customEpsg = code;
+      status.textContent = `✓ EPSG:${code}`;
+      status.className = 'ok';
+      if (currentBbox) renderPanel();
+    } catch (_) {
+      customEpsg = null;
+      status.textContent = `EPSG:${code} not found`;
+      status.className = 'err';
+      document.getElementById('transformed-section').classList.remove('visible');
+    }
+  }, 600);
+});
+
+/* ─── Precision slider ───────────────────────────────────────────────────── */
+document.getElementById('precision-slider').addEventListener('input', (e) => {
+  precision = parseInt(e.target.value);
+  document.getElementById('precision-val').textContent = precision;
+  if (currentBbox) renderPanel();
+});
+
+/* ─── Draw mode management ───────────────────────────────────────────────── */
+function setDrawMode(mode) {
+  drawMode = mode;
+  polyVerts = []; bboxAnchor = null;
+  clearPreview();
+
+  ['bbox','poly'].forEach(m => {
+    document.getElementById(`btn-${m}`).classList.toggle('active', m === mode);
+    document.getElementById(`tb-${m}`).classList.toggle('active', m === mode);
+  });
+
+  if (mode) {
+    document.body.classList.add('mode-draw');
+    map.dragPan.disable();
+    showHint(mode === 'bbox'
+      ? 'Click and drag to draw a bounding box  ·  Esc to cancel'
+      : 'Click to add vertices  ·  Double-click to close  ·  Esc to cancel');
+  } else {
+    document.body.classList.remove('mode-draw');
+    map.dragPan.enable();
+    hideHint();
+  }
+}
+
+function deactivateDraw() { setDrawMode(null); }
+
+function setCountryMode(on) {
+  countryMode = on;
+  document.getElementById('country-toggle').checked = on;
+  document.getElementById('tb-country').classList.toggle('country-on', on);
+  document.getElementById('country-hint').style.display = on ? 'block' : 'none';
+
+  if (on) {
+    document.body.classList.add('mode-country');
+    setDrawMode(null);
+    showHint('Hover a country  ·  Click to snap a bbox around it');
+    loadCountries();
+  } else {
+    document.body.classList.remove('mode-country');
+    document.getElementById('country-tooltip').style.display = 'none';
+    if (hoveredId !== null) {
+      map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: false });
+      hoveredId = null;
+    }
+    hideHint();
+  }
+}
+
+/* ─── Clear all ─────────────────────────────────────────────────────────── */
+function clearAll() {
+  currentBbox = null; coordLabel = '';
+  polyVerts = []; bboxAnchor = null;
+  deactivateDraw();
+  map.getSource('aoi')?.setData(emptyFC());
+  clearPreview();
+  document.getElementById('coords-section').classList.remove('visible');
+  document.getElementById('transformed-section').classList.remove('visible');
+  document.getElementById('format-list').innerHTML = '';
+  document.getElementById('format-list-tx').innerHTML = '';
+}
+
+/* ─── Upload GeoJSON ─────────────────────────────────────────────────────── */
+function handleUpload(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const raw = JSON.parse(ev.target.result);
+      const coords = [];
+      function dig(c) { if (typeof c[0] === 'number') coords.push(c); else c.forEach(dig); }
+      function walk(obj) {
+        if (!obj) return;
+        if (obj.type === 'FeatureCollection') obj.features.forEach(f => walk(f));
+        else if (obj.type === 'Feature') walk(obj.geometry);
+        else if (obj.coordinates) dig(obj.coordinates);
+      }
+      walk(raw);
+      if (!coords.length) { showHint('No geometry found in file', 3000); return; }
+
+      const lngs = coords.map(c => c[0]), lats = coords.map(c => c[1]);
+      const bbox = [Math.min(...lngs), Math.min(...lats), Math.max(...lngs), Math.max(...lats)];
+
+      let fc;
+      if (raw.type === 'FeatureCollection') fc = raw;
+      else if (raw.type === 'Feature')       fc = { type:'FeatureCollection', features:[raw] };
+      else fc = { type:'FeatureCollection', features:[{ type:'Feature', geometry:raw, properties:{} }] };
+
+      map.getSource('aoi').setData(fc);
+      commitBbox(bbox, file.name.replace(/\.(geo)?json$/i,''), 'upload');
+      map.fitBounds([[bbox[0],bbox[1]],[bbox[2],bbox[3]]], { padding:60, maxZoom:12, duration:700 });
+    } catch (_) { showHint('Invalid GeoJSON file', 3000); }
+  };
+  reader.readAsText(file);
+}
+
+/* ─── Button wiring ──────────────────────────────────────────────────────── */
+function toggleDraw(mode) {
+  setCountryMode(false);
+  setDrawMode(drawMode === mode ? null : mode);
+}
+
+document.getElementById('btn-bbox').addEventListener('click', () => toggleDraw('bbox'));
+document.getElementById('btn-poly').addEventListener('click', () => toggleDraw('poly'));
+document.getElementById('tb-bbox').addEventListener('click',  () => toggleDraw('bbox'));
+document.getElementById('tb-poly').addEventListener('click',  () => toggleDraw('poly'));
+
+document.getElementById('btn-clear').addEventListener('click', clearAll);
+document.getElementById('tb-clear').addEventListener('click',  clearAll);
+
+document.getElementById('country-toggle').addEventListener('change', (e) => setCountryMode(e.target.checked));
+document.getElementById('tb-country').addEventListener('click', () => setCountryMode(!countryMode));
+
+document.getElementById('upload-geojson').addEventListener('change', (e) => { handleUpload(e.target.files[0]); e.target.value=''; });
+document.getElementById('tb-upload').addEventListener('change',      (e) => { handleUpload(e.target.files[0]); e.target.value=''; });
+
+document.getElementById('sidebar-toggle').addEventListener('click', () => document.body.classList.toggle('sidebar-collapsed'));
+
+/* Escape key cancels draw mode / country mode */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (drawMode)      { deactivateDraw(); return; }
+    if (countryMode)   { setCountryMode(false); }
+  }
+});
+
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
+function emptyFC() { return { type:'FeatureCollection', features:[] }; }
+
+function toBbox(lng1, lat1, lng2, lat2) {
+  return [Math.min(lng1,lng2), Math.min(lat1,lat2), Math.max(lng1,lng2), Math.max(lat1,lat2)];
+}
+
+function bboxToFC([w,s,e,n]) {
+  return { type:'FeatureCollection', features:[{
+    type:'Feature',
+    geometry:{ type:'Polygon', coordinates:[[[w,s],[e,s],[e,n],[w,n],[w,s]]] },
+    properties:{}
+  }]};
+}
+
+function setPreview(fc) { map.getSource('preview')?.setData(fc); }
+function clearPreview()  { map.getSource('preview')?.setData(emptyFC()); }
+
+function flatCoords(geom) {
+  const out = [];
+  function dig(c) { if (typeof c[0] === 'number') out.push(c); else c.forEach(dig); }
+  dig(geom.coordinates);
+  return out;
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.classList.add('copied');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Copied';
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 1800);
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let hintTimer = null;
+function showHint(msg, auto) {
+  const el = document.getElementById('hint-banner');
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(hintTimer);
+  if (auto) hintTimer = setTimeout(hideHint, auto);
+}
+function hideHint() { document.getElementById('hint-banner').classList.remove('visible'); }
+
+function showLoader(msg) {
+  document.getElementById('loader-text').textContent = msg;
+  document.getElementById('loader').classList.add('visible');
+}
+function hideLoader() { document.getElementById('loader').classList.remove('visible'); }
+</script>
+</body>
+</html>
