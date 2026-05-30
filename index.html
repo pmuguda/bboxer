@@ -977,10 +977,12 @@ function setCountryMode(on) {
   if (on) {
     document.body.classList.add('mode-country');
     setDrawMode(null);
+    setCountriesVisible(true);
     showHint('Hover a country  ·  Click to snap a bbox around it');
     loadCountries();
   } else {
     document.body.classList.remove('mode-country');
+    setCountriesVisible(false);
     document.getElementById('country-tooltip').style.display = 'none';
     if (hoveredId !== null) {
       map.setFeatureState({ source:'countries', id: hoveredId }, { hovered: false });
@@ -988,6 +990,12 @@ function setCountryMode(on) {
     }
     hideHint();
   }
+}
+
+function setCountriesVisible(on) {
+  const v = on ? 'visible' : 'none';
+  if (map.getLayer('countries-fill')) map.setLayoutProperty('countries-fill', 'visibility', v);
+  if (map.getLayer('countries-line')) map.setLayoutProperty('countries-line', 'visibility', v);
 }
 
 /* ─── Clear all ─────────────────────────────────────────────────────────── */
