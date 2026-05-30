@@ -400,8 +400,10 @@
       </label>
     </div>
     <p id="country-hint" class="section-hint" style="display:none">Hover to highlight a country · Click to snap a bbox around it</p>
-    <p class="section-hint" style="margin-top:6px;font-size:10.5px;opacity:0.75">
-      Borders from Natural Earth 110m — disputed regions (Kashmir, etc.) follow that dataset's convention and may not reflect every party's claim.
+    <p class="section-hint" style="margin-top:6px;font-size:10.5px;opacity:0.75;line-height:1.5">
+      Disputed regions (Kashmir, Aksai Chin, Western Sahara, Crimea, Golan, N.&nbsp;Cyprus, …) are outlined in
+      <span style="color:#f85149">red with a dashed border</span>
+      and are <em>not</em> assigned to any country. Country bboxes here reflect Natural Earth's territorial classification and may not match every party's claim — verify before using in official work.
     </p>
   </div>
 
@@ -637,6 +639,29 @@ map.on('load', () => {
     }
   });
 
+  /* Disputed / breakaway areas — overlay on top of the country layer.
+     Visually distinct (red + dashed white outline) so users can see at a
+     glance which regions are contested between multiple claimants. Layer
+     is not in the clickable layers list, so clicks pass through to the
+     country beneath — meaning bboxes still reflect Natural Earth's
+     territorial assignment (we flag that in the disclaimer). */
+  map.addSource('disputed', { type: 'geojson', data: emptyFC() });
+  map.addLayer({
+    id: 'disputed-fill', type: 'fill', source: 'disputed',
+    layout: { visibility: 'none' },
+    paint: { 'fill-color': '#f85149', 'fill-opacity': 0.18 }
+  });
+  map.addLayer({
+    id: 'disputed-line', type: 'line', source: 'disputed',
+    layout: { visibility: 'none' },
+    paint: {
+      'line-color': '#ffffff',
+      'line-width': 1.2,
+      'line-dasharray': [3, 2],
+      'line-opacity': 0.7,
+    }
+  });
+
   /* drawn AOI */
   map.addSource('aoi', { type: 'geojson', data: emptyFC() });
   map.addLayer({
@@ -832,6 +857,18 @@ async function loadCountries() {
        a meaningful workflow anyway. */
     geojson.features = geojson.features.filter(f => f.id !== 10);
     map.getSource('countries').setData(geojson);
+
+    /* Fetch disputed-areas overlay (Natural Earth 50m). Includes Kashmir,
+       Aksai Chin, Western Sahara, Crimea, Golan Heights, N. Cyprus,
+       Somaliland, Abkhazia, etc. Failure here is non-fatal — country
+       picking still works without the overlay. */
+    try {
+      const dRes = await fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_admin_0_breakaway_disputed_areas.geojson');
+      const dGeo = await dRes.json();
+      dGeo.features.forEach(f => unwrapAntimeridian(f.geometry));
+      map.getSource('disputed').setData(dGeo);
+    } catch (_) { /* overlay is best-effort */ }
+
     countriesLoaded = true;
   } catch (_) {
     showHint('Failed to load country data — check your connection', 4000);
@@ -1053,8 +1090,9 @@ function setCountryMode(on) {
 
 function setCountriesVisible(on) {
   const v = on ? 'visible' : 'none';
-  if (map.getLayer('countries-fill')) map.setLayoutProperty('countries-fill', 'visibility', v);
-  if (map.getLayer('countries-line')) map.setLayoutProperty('countries-line', 'visibility', v);
+  ['countries-fill','countries-line','disputed-fill','disputed-line'].forEach(id => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', v);
+  });
 }
 
 /* ─── Clear all ─────────────────────────────────────────────────────────── */
