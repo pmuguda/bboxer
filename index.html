@@ -766,6 +766,22 @@ function handleCountryClick(e) {
   map.fitBounds([[bbox[0],bbox[1]],[bbox[2],bbox[3]]], { padding:60, maxZoom:8, duration:700 });
 }
 
+/* Make each ring's longitudes continuous so antimeridian-crossing countries
+   (Russia, Fiji) don't render a fill/stroke band across the whole map.
+   Coordinates may end up outside [-180,180]; MapLibre wraps them cleanly. */
+function unwrapAntimeridian(geom) {
+  if (!geom) return;
+  const fixRing = (ring) => {
+    for (let i = 1; i < ring.length; i++) {
+      let d = ring[i][0] - ring[i - 1][0];
+      if (d > 180)  ring[i][0] -= 360;
+      else if (d < -180) ring[i][0] += 360;
+    }
+  };
+  if (geom.type === 'Polygon') geom.coordinates.forEach(fixRing);
+  else if (geom.type === 'MultiPolygon') geom.coordinates.forEach(poly => poly.forEach(fixRing));
+}
+
 async function loadCountries() {
   if (countriesLoaded) return;
   showLoader('Loading countries…');
@@ -779,6 +795,7 @@ async function loadCountries() {
       f.id = Number(f.id);
       f.properties = f.properties || {};
       if (!f.properties.name) f.properties.name = ISO_NAMES[f.id] || '';
+      unwrapAntimeridian(f.geometry);  // fix Russia/Fiji fill bands across the map
     });
     map.getSource('countries').setData(geojson);
     countriesLoaded = true;
