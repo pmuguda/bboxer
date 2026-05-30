@@ -1287,9 +1287,10 @@ function setDrawMode(mode) {
   polyVerts = []; bboxAnchor = null;
   clearPreview();
 
+  /* Only toolbar buttons live in the DOM now (sidebar Draw Tools removed). */
   ['bbox','poly'].forEach(m => {
-    document.getElementById(`btn-${m}`).classList.toggle('active', m === mode);
-    document.getElementById(`tb-${m}`).classList.toggle('active', m === mode);
+    const tb = document.getElementById(`tb-${m}`);
+    if (tb) tb.classList.toggle('active', m === mode);
   });
 
   if (mode) {
