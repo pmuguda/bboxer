@@ -3,8 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BBoxer — AOI Coordinate Copier</title>
-  <meta name="description" content="Draw, snap & instantly copy bounding-box coordinates in any EPSG. Supports bbox draw, polygon draw, GeoJSON upload, and country picker.">
+
+  <!-- ─── SEO ─────────────────────────────────────────────────────── -->
+  <title>BBoxer — Draw, snap &amp; copy bounding-box coordinates in any EPSG</title>
+  <meta name="description" content="Free online tool to draw, snap and instantly copy bounding-box (bbox) and AOI coordinates in EPSG:4326 or any projected CRS. Draw a rectangle, polygon, upload GeoJSON, or pick a country — get the bbox as Python list or WKT, with on-the-fly proj4 reprojection.">
+  <meta name="keywords" content="bbox, bounding box, AOI, area of interest, EPSG, coordinates, GIS, GeoJSON, MapLibre, proj4, reprojection, country bbox, Kashmir, disputed regions, Natural Earth, remote sensing, satellite data, rasterio, gdal, shapely, leaflet, xarray">
+  <meta name="author" content="Pavan Muguda Sanjeevamurthy">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://pmuguda.github.io/bboxer/">
+
+  <!-- Open Graph (LinkedIn, Slack, Discord, WhatsApp link previews) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="BBoxer — Copy AOI/bbox coordinates in any EPSG">
+  <meta property="og:description" content="Draw a bbox, polygon, upload GeoJSON or pick a country — instantly get coordinates in EPSG:4326 or any projected CRS.">
+  <meta property="og:url" content="https://pmuguda.github.io/bboxer/">
+  <meta property="og:site_name" content="BBoxer">
+  <meta property="og:image" content="https://pmuguda.github.io/bboxer/og-preview.png">
+
+  <!-- Twitter / X card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="BBoxer — Copy AOI/bbox coordinates in any EPSG">
+  <meta name="twitter:description" content="Draw a bbox, polygon, upload GeoJSON or pick a country — instantly get coordinates in EPSG:4326 or any projected CRS.">
+  <meta name="twitter:image" content="https://pmuguda.github.io/bboxer/og-preview.png">
+
+  <!-- JSON-LD structured data — helps Google show a rich result card -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "BBoxer",
+    "url": "https://pmuguda.github.io/bboxer/",
+    "applicationCategory": "DesignApplication",
+    "operatingSystem": "Any (browser-based)",
+    "description": "Draw, snap and instantly copy bounding-box (bbox) and AOI coordinates in EPSG:4326 or any projected CRS. Supports bbox draw, polygon draw, GeoJSON upload, country picker, on-the-fly proj4 reprojection, and dynamic lat/lon graticule.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": {
+      "@type": "Person",
+      "name": "Pavan Muguda Sanjeevamurthy",
+      "url": "https://pmuguda.github.io/"
+    },
+    "featureList": [
+      "Draw bounding box (click-drag)",
+      "Draw polygon",
+      "Upload GeoJSON",
+      "Country picker with disputed-regions overlay",
+      "On-the-fly EPSG reprojection via proj4js",
+      "Copy as Python list or WKT polygon",
+      "W,S,E,N and W,E,S,N axis-order toggle",
+      "Dynamic lat/lon graticule with degree labels"
+    ]
+  }
+  </script>
+
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css"
         crossorigin="anonymous">
   <style>
