@@ -401,9 +401,9 @@
     </div>
     <p id="country-hint" class="section-hint" style="display:none">Hover to highlight a country · Click to snap a bbox around it</p>
     <p class="section-hint" style="margin-top:6px;font-size:10.5px;opacity:0.75;line-height:1.5">
-      Disputed regions (Kashmir, Aksai Chin, Western Sahara, Crimea, Golan, N.&nbsp;Cyprus, …) are outlined in
-      <span style="color:#f85149">red with a dashed border</span>
-      and are <em>not</em> assigned to any country. Country bboxes here reflect Natural Earth's territorial classification and may not match every party's claim — verify before using in official work.
+      Disputed regions (Kashmir, Aksai Chin, Western Sahara, Crimea, Golan, N.&nbsp;Cyprus, …) are masked in
+      <span style="color:#d96b72">dark red with a dashed border</span>
+      and are <em>not</em> visually assigned to any country. Note: the underlying country bbox here follows Natural Earth's classification and <em>may</em> still extend through disputed areas — verify against your authoritative source before using in official work.
     </p>
   </div>
 
@@ -649,16 +649,23 @@ map.on('load', () => {
   map.addLayer({
     id: 'disputed-fill', type: 'fill', source: 'disputed',
     layout: { visibility: 'none' },
-    paint: { 'fill-color': '#f85149', 'fill-opacity': 0.18 }
+    paint: {
+      /* Near-opaque so the selected-country fill underneath is fully
+         masked — otherwise picking Pakistan still looks like it claims
+         Kashmir. A muted red distinct from the bright #f85149 we use
+         for destructive actions. */
+      'fill-color': '#8b2c33',
+      'fill-opacity': 0.92,
+    }
   });
   map.addLayer({
     id: 'disputed-line', type: 'line', source: 'disputed',
     layout: { visibility: 'none' },
     paint: {
       'line-color': '#ffffff',
-      'line-width': 1.2,
+      'line-width': 1.4,
       'line-dasharray': [3, 2],
-      'line-opacity': 0.7,
+      'line-opacity': 0.85,
     }
   });
 
