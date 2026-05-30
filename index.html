@@ -172,11 +172,38 @@
     .coord-source-text strong { color: var(--text); font-weight: 600; max-width: 160px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 
     .precision-row {
-      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
     }
     .precision-row label { font-size: 11px; color: var(--muted); white-space: nowrap; }
     #precision-slider { flex: 1; accent-color: var(--accent); cursor: pointer; }
     .precision-val { font-size: 11px; color: var(--accent); font-family: monospace; min-width: 10px; }
+
+    .order-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; margin-bottom: 12px;
+    }
+    .order-label { font-size: 11px; color: var(--muted); }
+    .order-pills {
+      display: flex; border-radius: 6px; border: 1px solid var(--border);
+      overflow: hidden; flex-shrink: 0;
+    }
+    .order-pill {
+      padding: 4px 10px; font-size: 10.5px; font-weight: 700;
+      border: none; background: transparent; color: var(--muted);
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+      letter-spacing: 0.03em; line-height: 1.4; font-family: 'SF Mono', monospace;
+    }
+    .order-pill + .order-pill { border-left: 1px solid var(--border); }
+    .order-pill.active { background: var(--accent); color: #000; }
+    .order-pill:not(.active):hover { color: var(--text); background: rgba(255,255,255,0.07); }
+
+    .units-chip {
+      padding: 2px 7px; border-radius: 4px;
+      background: rgba(139,148,158,0.12);
+      border: 1px solid rgba(139,148,158,0.3);
+      color: var(--muted); font-size: 10px; font-weight: 700;
+      font-family: 'SF Mono', monospace; margin-left: 6px;
+    }
 
     .format-card {
       background: var(--bg); border: 1px solid var(--border);
@@ -344,6 +371,7 @@
     <div class="section-title">Coordinate Reference System</div>
     <div class="crs-row">
       <span class="epsg-badge">EPSG:4326</span>
+      <span class="units-chip" id="src-units-chip">°</span>
       <span class="crs-arrow">→</span>
       <div class="epsg-input-wrap">
         <span class="epsg-prefix">EPSG:</span>
@@ -422,6 +450,14 @@
       <label for="precision-slider">Precision</label>
       <input type="range" id="precision-slider" min="0" max="8" value="6">
       <span class="precision-val" id="precision-val">6</span>
+    </div>
+
+    <div class="order-row">
+      <span class="order-label">Order</span>
+      <div class="order-pills">
+        <button class="order-pill active" data-order="wsen" title="minX, minY, maxX, maxY — rasterio / shapely / leaflet">W,&nbsp;S,&nbsp;E,&nbsp;N</button>
+        <button class="order-pill"        data-order="wesn" title="minX, maxX, minY, maxY — matplotlib extent / xarray slicing">W,&nbsp;E,&nbsp;S,&nbsp;N</button>
+      </div>
     </div>
 
     <div id="format-list"></div>
@@ -583,6 +619,7 @@ let selectedId     = null;
 const countryBbox  = new Map();  // id → [w, s, e, n] (kept off the feature
                                  // because MapLibre serializes properties)
 let precision      = 6;
+let order          = 'wsen'; // 'wsen' (minX,minY,maxX,maxY) | 'wesn' (minX,maxX,minY,maxY)
 let coordLabel     = '';
 let coordType      = 'bbox'; // 'bbox' | 'poly' | 'upload' | 'country'
 
@@ -914,14 +951,8 @@ function renderPanel() {
     ? '<polygon points="7,1 13,5 11,12 3,12 1,5"/>'
     : '<rect x="1" y="1" width="12" height="12" rx="1.5"/>';
 
-  const formats = [
-    { lbl:'Array  [W, S, E, N]',   val:`[${w}, ${s}, ${e}, ${n}]` },
-    { lbl:'CSV  W,S,E,N',           val:`${w},${s},${e},${n}` },
-    { lbl:'Python list',            val:`[${w}, ${s}, ${e}, ${n}]` },
-    { lbl:'GDAL  -te',              val:`-te ${w} ${s} ${e} ${n}` },
-    { lbl:'WKT BBox polygon',       val:`POLYGON((${w} ${s}, ${e} ${s}, ${e} ${n}, ${w} ${n}, ${w} ${s}))` },
-  ];
-  renderFormatList('format-list', formats);
+  const units = unitsForEpsg(4326);
+  renderFormatList('format-list', buildFormats(w, s, e, n, units));
 
   /* transformed */
   if (customEpsg && proj4.defs[`EPSG:${customEpsg}`]) {
@@ -929,6 +960,47 @@ function renderPanel() {
   } else {
     document.getElementById('transformed-section').classList.remove('visible');
   }
+}
+
+/* Build the list of copy formats in the user's chosen axis order.
+   - Python list: respects the order toggle.
+   - GDAL -te:    always W,S,E,N — the tool requires that exact order.
+   - WKT:         geometric vertex sequence, order toggle doesn't apply. */
+function buildFormats(w, s, e, n, units) {
+  const u = units ? ` ${units}` : '';
+  if (order === 'wesn') {
+    return [
+      { lbl: `Python list  ·  W, E, S, N${units ? '  ('+units+')' : ''}`,
+        val: `[${w}, ${e}, ${s}, ${n}]` },
+      { lbl: 'GDAL  -te  ·  fixed W S E N',
+        val: `-te ${w} ${s} ${e} ${n}` },
+      { lbl: 'WKT BBox polygon',
+        val: `POLYGON((${w} ${s}, ${e} ${s}, ${e} ${n}, ${w} ${n}, ${w} ${s}))` },
+    ];
+  }
+  return [
+    { lbl: `Python list  ·  W, S, E, N${units ? '  ('+units+')' : ''}`,
+      val: `[${w}, ${s}, ${e}, ${n}]` },
+    { lbl: 'GDAL  -te',
+      val: `-te ${w} ${s} ${e} ${n}` },
+    { lbl: 'WKT BBox polygon',
+      val: `POLYGON((${w} ${s}, ${e} ${s}, ${e} ${n}, ${w} ${n}, ${w} ${s}))` },
+  ];
+}
+
+/* Resolve display units for an EPSG code via the proj4 definition.
+   Returns '°' for geographic CRS, 'm' for projected, 'ft' / 'us-ft' where
+   defined, or '' if unknown. */
+function unitsForEpsg(code) {
+  if (code === 4326 || code === 4269 || code === 4258) return '°';
+  const def = proj4.defs[`EPSG:${code}`];
+  if (!def) return '';
+  if (def.projName === 'longlat') return '°';
+  const u = def.units;
+  if (!u) return 'm';
+  if (u === 'm' || u === 'meter' || u === 'metre') return 'm';
+  if (u === 'ft' || u === 'us-ft') return u;
+  return u;
 }
 
 function renderFormatList(containerId, formats) {
@@ -946,13 +1018,10 @@ function renderTransformed(w, s, e, n) {
     const tw = +Math.min(...xs).toFixed(p), ts = +Math.min(...ys).toFixed(p);
     const te = +Math.max(...xs).toFixed(p), tn = +Math.max(...ys).toFixed(p);
 
-    document.getElementById('tx-chip').textContent = `EPSG:${customEpsg}`;
-    const formats = [
-      { lbl:'Array  [W, S, E, N]', val:`[${tw}, ${ts}, ${te}, ${tn}]` },
-      { lbl:'CSV  W,S,E,N',         val:`${tw},${ts},${te},${tn}` },
-      { lbl:'GDAL  -te',            val:`-te ${tw} ${ts} ${te} ${tn}` },
-    ];
-    renderFormatList('format-list-tx', formats);
+    const txUnits = unitsForEpsg(customEpsg);
+    document.getElementById('tx-chip').textContent =
+      `EPSG:${customEpsg}${txUnits ? '  ·  ' + txUnits : ''}`;
+    renderFormatList('format-list-tx', buildFormats(tw, ts, te, tn, txUnits));
     document.getElementById('transformed-section').classList.add('visible');
   } catch (_) {
     document.getElementById('transformed-section').classList.remove('visible');
@@ -1043,6 +1112,15 @@ document.getElementById('precision-slider').addEventListener('input', (e) => {
   precision = parseInt(e.target.value);
   document.getElementById('precision-val').textContent = precision;
   if (currentBbox) renderPanel();
+});
+
+document.querySelectorAll('.order-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    order = btn.dataset.order;
+    document.querySelectorAll('.order-pill').forEach(b =>
+      b.classList.toggle('active', b.dataset.order === order));
+    if (currentBbox) renderPanel();
+  });
 });
 
 /* ─── Draw mode management ───────────────────────────────────────────────── */
