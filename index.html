@@ -413,40 +413,6 @@
     <div id="epsg-status"></div>
   </div>
 
-  <!-- Draw -->
-  <div class="panel-section">
-    <div class="section-title">Draw Tools</div>
-    <div class="tool-grid">
-
-      <button class="tool-btn" id="btn-bbox" title="Draw bounding box (click-drag)">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="14" height="14" rx="1"/>
-          <circle cx="3" cy="3" r="1.6" fill="currentColor" stroke="none"/>
-          <circle cx="17" cy="3" r="1.6" fill="currentColor" stroke="none"/>
-          <circle cx="3" cy="17" r="1.6" fill="currentColor" stroke="none"/>
-          <circle cx="17" cy="17" r="1.6" fill="currentColor" stroke="none"/>
-        </svg>
-        BBox
-      </button>
-
-      <button class="tool-btn" id="btn-poly" title="Draw polygon (click vertices, double-click to close)">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="10,2 18,8 15,17 5,17 2,8"/>
-        </svg>
-        Polygon
-      </button>
-
-      <label class="upload-label" title="Upload GeoJSON file">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10 13V3M6 9l4-6 4 6"/><path d="M3 16h14"/>
-        </svg>
-        Upload
-        <input type="file" id="upload-geojson" accept=".geojson,.json" hidden>
-      </label>
-
-    </div>
-    <button class="clear-btn" id="btn-clear">✕  Clear all</button>
-  </div>
 
   <!-- Country Picker -->
   <div class="panel-section">
@@ -1429,19 +1395,15 @@ function toggleDraw(mode) {
   setDrawMode(drawMode === mode ? null : mode);
 }
 
-document.getElementById('btn-bbox').addEventListener('click', () => toggleDraw('bbox'));
-document.getElementById('btn-poly').addEventListener('click', () => toggleDraw('poly'));
-document.getElementById('tb-bbox').addEventListener('click',  () => toggleDraw('bbox'));
-document.getElementById('tb-poly').addEventListener('click',  () => toggleDraw('poly'));
-
-document.getElementById('btn-clear').addEventListener('click', clearAll);
+/* Draw / upload / clear are driven by the floating toolbar only; the
+   sidebar duplicates were removed for being redundant. */
+document.getElementById('tb-bbox').addEventListener('click',   () => toggleDraw('bbox'));
+document.getElementById('tb-poly').addEventListener('click',   () => toggleDraw('poly'));
 document.getElementById('tb-clear').addEventListener('click',  clearAll);
+document.getElementById('tb-upload').addEventListener('change', (e) => { handleUpload(e.target.files[0]); e.target.value=''; });
 
 document.getElementById('country-toggle').addEventListener('change', (e) => setCountryMode(e.target.checked));
 document.getElementById('tb-country').addEventListener('click', () => setCountryMode(!countryMode));
-
-document.getElementById('upload-geojson').addEventListener('change', (e) => { handleUpload(e.target.files[0]); e.target.value=''; });
-document.getElementById('tb-upload').addEventListener('change',      (e) => { handleUpload(e.target.files[0]); e.target.value=''; });
 
 document.getElementById('sidebar-toggle').addEventListener('click', () => document.body.classList.toggle('sidebar-collapsed'));
 
