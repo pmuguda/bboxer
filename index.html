@@ -269,10 +269,11 @@
       font-family: 'SF Mono', monospace; margin-left: 6px;
     }
 
+    .download-row { margin-top: 10px; }
     .download-btn {
       width: 100%;
       display: flex; align-items: center; justify-content: center; gap: 7px;
-      padding: 8px 12px; margin-top: 10px;
+      padding: 8px 12px;
       border-radius: 7px;
       border: 1.5px solid rgba(63,185,80,0.4);
       background: rgba(63,185,80,0.08);
@@ -283,6 +284,24 @@
     .download-btn svg { width: 14px; height: 14px; }
     .download-btn:hover { background: rgba(63,185,80,0.15); border-color: var(--accent); }
     .download-btn.flash { background: rgba(63,185,80,0.22); }
+    .dl-crs-tag {
+      padding: 1px 6px; border-radius: 4px;
+      background: rgba(63,185,80,0.18);
+      font-family: 'SF Mono', monospace;
+      font-size: 10.5px; font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .download-crs-pills {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 6px; justify-content: flex-end;
+      font-size: 10.5px; color: var(--muted);
+    }
+    .download-crs-pills::before {
+      content: 'Output CRS';
+      margin-right: auto;
+      font-size: 10.5px; color: var(--muted);
+    }
+    .download-crs-pills .order-pill[hidden] { display: none; }
 
     .format-card {
       background: var(--bg); border: 1px solid var(--border);
@@ -536,13 +555,20 @@
 
     <div id="format-list"></div>
 
-    <button class="download-btn" id="btn-download-geojson" title="Download bbox as GeoJSON">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M8 2v9M4 7l4 4 4-4"/>
-        <path d="M2 13h12"/>
-      </svg>
-      Download GeoJSON
-    </button>
+    <div class="download-row">
+      <button class="download-btn" id="btn-download-geojson" title="Download bbox as GeoJSON">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 2v9M4 7l4 4 4-4"/>
+          <path d="M2 13h12"/>
+        </svg>
+        Download GeoJSON
+        <span class="dl-crs-tag" id="dl-crs-tag">EPSG:4326</span>
+      </button>
+      <div class="download-crs-pills" id="download-crs-pills">
+        <button class="order-pill active" data-dl="4326" title="Standard GeoJSON in WGS84 — works in every tool">4326</button>
+        <button class="order-pill" data-dl="custom" id="dl-pill-custom" title="Projected CRS — includes legacy `crs` member (GDAL/QGIS recognise it; some tools may not)" hidden>EPSG:—</button>
+      </div>
+    </div>
 
     <div id="transformed-section">
       <div class="transform-header">
@@ -702,6 +728,7 @@ const countryBbox  = new Map();  // id → [w, s, e, n] (kept off the feature
                                  // because MapLibre serializes properties)
 let precision      = 6;
 let order          = 'wsen'; // 'wsen' (minX,minY,maxX,maxY) | 'wesn' (minX,maxX,minY,maxY)
+let dlCrs          = '4326'; // '4326' | 'custom' — which CRS the download button writes
 let coordLabel     = '';
 let coordType      = 'bbox'; // 'bbox' | 'poly' | 'upload' | 'country'
 
@@ -1211,6 +1238,7 @@ function renderPanel() {
     renderTransformed(w, s, e, n);
   } else {
     document.getElementById('transformed-section').classList.remove('visible');
+    if (typeof updateDownloadCrsTag === 'function') updateDownloadCrsTag();
   }
 }
 
@@ -1263,6 +1291,7 @@ function renderTransformed(w, s, e, n) {
       `EPSG:${customEpsg}${txUnits ? '  ·  ' + txUnits : ''}`;
     renderFormatList('format-list-tx', buildFormats(tw, ts, te, tn, txUnits));
     document.getElementById('transformed-section').classList.add('visible');
+    if (typeof updateDownloadCrsTag === 'function') updateDownloadCrsTag();
   } catch (_) {
     document.getElementById('transformed-section').classList.remove('visible');
   }
@@ -1354,71 +1383,112 @@ document.getElementById('precision-slider').addEventListener('input', (e) => {
   if (currentBbox) renderPanel();
 });
 
-/* Download current bbox as GeoJSON (FeatureCollection with the bbox polygon,
-   metadata on the source label + EPSG + transformed CRS coords if applicable). */
+/* Download current bbox as GeoJSON. Honours the CRS pill choice:
+   - '4326'  → standards-compliant GeoJSON (RFC 7946)
+   - 'custom' → projected coords with a legacy `crs` member so GDAL/QGIS
+                pick up the units. Some strict GeoJSON parsers will warn. */
 document.getElementById('btn-download-geojson').addEventListener('click', () => {
   if (!currentBbox) return;
+  const useCustom = dlCrs === 'custom' && customEpsg && proj4.defs[`EPSG:${customEpsg}`];
+
   let [w, s, e, n] = currentBbox;
-  /* Normalise antimeridian wraps for the GeoJSON output */
   if (e > 180) e = e - 360;
   const ringWGS84 = [[w,s],[e,s],[e,n],[w,n],[w,s]];
 
-  const features = [{
-    type: 'Feature',
-    properties: {
-      name: coordLabel || 'bbox',
-      source_type: coordType,
-      epsg: 4326,
-      bbox_wsen: [w, s, e, n],
-    },
-    bbox: [w, s, e, n],
-    geometry: { type: 'Polygon', coordinates: [ringWGS84] },
-  }];
+  let geojson, filenameSuffix;
 
-  /* Optional second feature in the transformed CRS, when set */
-  if (customEpsg && proj4.defs[`EPSG:${customEpsg}`]) {
-    try {
-      const to = `EPSG:${customEpsg}`;
-      const pts = [[w,s],[e,s],[e,n],[w,n]].map(p => proj4('EPSG:4326', to, p));
-      const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-      const tw = Math.min(...xs), ts = Math.min(...ys);
-      const te = Math.max(...xs), tn = Math.max(...ys);
-      /* Re-project corners back to 4326 so the geometry is still GeoJSON-valid;
-         the projected bbox itself lives in properties for downstream use. */
-      const corners = [[tw,ts],[te,ts],[te,tn],[tw,tn],[tw,ts]]
-        .map(p => proj4(to, 'EPSG:4326', p));
-      features.push({
+  if (useCustom) {
+    const to = `EPSG:${customEpsg}`;
+    const pts = [[w,s],[e,s],[e,n],[w,n]].map(p => proj4('EPSG:4326', to, p));
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const tw = Math.min(...xs), ts = Math.min(...ys);
+    const te = Math.max(...xs), tn = Math.max(...ys);
+    const ring = [[tw,ts],[te,ts],[te,tn],[tw,tn],[tw,ts]];
+
+    geojson = {
+      type: 'FeatureCollection',
+      /* Legacy CRS member — removed from RFC 7946 but still respected by
+         GDAL/QGIS/Fiona for non-WGS84 GeoJSON. Strict parsers ignore it. */
+      crs: { type: 'name', properties: { name: `urn:ogc:def:crs:EPSG::${customEpsg}` } },
+      features: [{
         type: 'Feature',
+        bbox: [tw, ts, te, tn],
         properties: {
-          name: (coordLabel || 'bbox') + ' (' + to + ')',
+          name: coordLabel || 'bbox',
           source_type: coordType,
           epsg: customEpsg,
-          bbox_wsen_in_crs: [tw, ts, te, tn],
+          bbox_wsen: [tw, ts, te, tn],
+          units: unitsForEpsg(customEpsg) || 'm',
         },
-        bbox: [tw, ts, te, tn],
-        geometry: { type: 'Polygon', coordinates: [corners] },
-      });
-    } catch (_) { /* skip transformed feature on failure */ }
+        geometry: { type: 'Polygon', coordinates: [ring] },
+      }],
+    };
+    filenameSuffix = `_epsg${customEpsg}`;
+  } else {
+    geojson = {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        bbox: [w, s, e, n],
+        properties: {
+          name: coordLabel || 'bbox',
+          source_type: coordType,
+          epsg: 4326,
+          bbox_wsen: [w, s, e, n],
+          units: '°',
+        },
+        geometry: { type: 'Polygon', coordinates: [ringWGS84] },
+      }],
+    };
+    filenameSuffix = '';
   }
 
-  const geojson = { type: 'FeatureCollection', features };
   const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
   const url  = URL.createObjectURL(blob);
-
   const safeName = (coordLabel || 'bbox').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'bbox';
+
   const a = document.createElement('a');
   a.href = url;
-  a.download = `bbox_${safeName}.geojson`;
+  a.download = `bbox_${safeName}${filenameSuffix}.geojson`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-  /* Visual flash feedback */
   const btn = document.getElementById('btn-download-geojson');
   btn.classList.add('flash');
   setTimeout(() => btn.classList.remove('flash'), 600);
 });
+
+/* CRS pill toggle for the download */
+document.querySelectorAll('.download-crs-pills .order-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.hidden) return;
+    dlCrs = btn.dataset.dl;
+    document.querySelectorAll('.download-crs-pills .order-pill').forEach(b =>
+      b.classList.toggle('active', b.dataset.dl === dlCrs));
+    updateDownloadCrsTag();
+  });
+});
+
+/* Keep the EPSG tag + custom pill in sync with the source EPSG state */
+function updateDownloadCrsTag() {
+  const tag  = document.getElementById('dl-crs-tag');
+  const pill = document.getElementById('dl-pill-custom');
+  if (!tag || !pill) return;
+  if (customEpsg && proj4.defs[`EPSG:${customEpsg}`]) {
+    pill.hidden = false;
+    pill.textContent = `EPSG:${customEpsg}`;
+  } else {
+    pill.hidden = true;
+    if (dlCrs === 'custom') {
+      dlCrs = '4326';
+      document.querySelectorAll('.download-crs-pills .order-pill').forEach(b =>
+        b.classList.toggle('active', b.dataset.dl === '4326'));
+    }
+  }
+  tag.textContent = dlCrs === 'custom' ? `EPSG:${customEpsg}` : 'EPSG:4326';
+}
 
 document.querySelectorAll('.order-pill').forEach(btn => {
   btn.addEventListener('click', () => {
