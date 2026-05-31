@@ -269,6 +269,21 @@
       font-family: 'SF Mono', monospace; margin-left: 6px;
     }
 
+    .download-btn {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 8px 12px; margin-top: 10px;
+      border-radius: 7px;
+      border: 1.5px solid rgba(63,185,80,0.4);
+      background: rgba(63,185,80,0.08);
+      color: var(--accent);
+      font-size: 12.5px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .download-btn svg { width: 14px; height: 14px; }
+    .download-btn:hover { background: rgba(63,185,80,0.15); border-color: var(--accent); }
+    .download-btn.flash { background: rgba(63,185,80,0.22); }
+
     .format-card {
       background: var(--bg); border: 1px solid var(--border);
       border-radius: 7px; padding: 9px 11px; margin-bottom: 5px;
@@ -520,6 +535,14 @@
     </div>
 
     <div id="format-list"></div>
+
+    <button class="download-btn" id="btn-download-geojson" title="Download bbox as GeoJSON">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2v9M4 7l4 4 4-4"/>
+        <path d="M2 13h12"/>
+      </svg>
+      Download GeoJSON
+    </button>
 
     <div id="transformed-section">
       <div class="transform-header">
@@ -1329,6 +1352,72 @@ document.getElementById('precision-slider').addEventListener('input', (e) => {
   precision = parseInt(e.target.value);
   document.getElementById('precision-val').textContent = precision;
   if (currentBbox) renderPanel();
+});
+
+/* Download current bbox as GeoJSON (FeatureCollection with the bbox polygon,
+   metadata on the source label + EPSG + transformed CRS coords if applicable). */
+document.getElementById('btn-download-geojson').addEventListener('click', () => {
+  if (!currentBbox) return;
+  let [w, s, e, n] = currentBbox;
+  /* Normalise antimeridian wraps for the GeoJSON output */
+  if (e > 180) e = e - 360;
+  const ringWGS84 = [[w,s],[e,s],[e,n],[w,n],[w,s]];
+
+  const features = [{
+    type: 'Feature',
+    properties: {
+      name: coordLabel || 'bbox',
+      source_type: coordType,
+      epsg: 4326,
+      bbox_wsen: [w, s, e, n],
+    },
+    bbox: [w, s, e, n],
+    geometry: { type: 'Polygon', coordinates: [ringWGS84] },
+  }];
+
+  /* Optional second feature in the transformed CRS, when set */
+  if (customEpsg && proj4.defs[`EPSG:${customEpsg}`]) {
+    try {
+      const to = `EPSG:${customEpsg}`;
+      const pts = [[w,s],[e,s],[e,n],[w,n]].map(p => proj4('EPSG:4326', to, p));
+      const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+      const tw = Math.min(...xs), ts = Math.min(...ys);
+      const te = Math.max(...xs), tn = Math.max(...ys);
+      /* Re-project corners back to 4326 so the geometry is still GeoJSON-valid;
+         the projected bbox itself lives in properties for downstream use. */
+      const corners = [[tw,ts],[te,ts],[te,tn],[tw,tn],[tw,ts]]
+        .map(p => proj4(to, 'EPSG:4326', p));
+      features.push({
+        type: 'Feature',
+        properties: {
+          name: (coordLabel || 'bbox') + ' (' + to + ')',
+          source_type: coordType,
+          epsg: customEpsg,
+          bbox_wsen_in_crs: [tw, ts, te, tn],
+        },
+        bbox: [tw, ts, te, tn],
+        geometry: { type: 'Polygon', coordinates: [corners] },
+      });
+    } catch (_) { /* skip transformed feature on failure */ }
+  }
+
+  const geojson = { type: 'FeatureCollection', features };
+  const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
+  const url  = URL.createObjectURL(blob);
+
+  const safeName = (coordLabel || 'bbox').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'bbox';
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bbox_${safeName}.geojson`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  /* Visual flash feedback */
+  const btn = document.getElementById('btn-download-geojson');
+  btn.classList.add('flash');
+  setTimeout(() => btn.classList.remove('flash'), 600);
 });
 
 document.querySelectorAll('.order-pill').forEach(btn => {
