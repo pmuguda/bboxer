@@ -920,6 +920,21 @@ map.on('load', () => {
     });
   }
 
+  /* Derived bbox outline — rendered on top of the AOI so the user can see
+     the bounding rectangle around polygons / uploads / country picks. */
+  if (!map.getSource('aoi-bbox')) {
+    map.addSource('aoi-bbox', { type: 'geojson', data: emptyFC() });
+    map.addLayer({
+      id: 'aoi-bbox-line', type: 'line', source: 'aoi-bbox',
+      paint: {
+        'line-color': '#d29922',
+        'line-width': 1.3,
+        'line-dasharray': [6, 3],
+        'line-opacity': 0.9,
+      }
+    });
+  }
+
   /* rubber-band preview */
   if (!map.getSource('preview')) {
     map.addSource('preview', { type: 'geojson', data: emptyFC() });
@@ -1135,6 +1150,10 @@ function commitBbox(bbox, label, type) {
   currentBbox = bbox;
   coordLabel  = label;
   coordType   = type;
+  /* Always draw the derived bbox rectangle. For type 'bbox' the AOI itself
+     IS the bbox so the outline coincides with the AOI border — harmless;
+     for poly / upload / country it visualises the snapped bounds. */
+  map.getSource('aoi-bbox')?.setData(bboxToFC(bbox));
   renderPanel();
   document.getElementById('coords-section').classList.add('visible');
 }
@@ -1399,6 +1418,7 @@ function clearAll() {
     selectedId = null;
   }
   map.getSource('aoi')?.setData(emptyFC());
+  map.getSource('aoi-bbox')?.setData(emptyFC());
   clearPreview();
   document.getElementById('coords-section').classList.remove('visible');
   document.getElementById('transformed-section').classList.remove('visible');
