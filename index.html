@@ -468,6 +468,135 @@
     .maplibregl-ctrl-group button { color: var(--muted) !important; }
     .maplibregl-ctrl-group button:hover { background: rgba(255,255,255,0.07) !important; color: var(--text) !important; }
     .maplibregl-ctrl-scale { background: var(--surface) !important; border-color: var(--border) !important; color: var(--muted) !important; font-size: 10px !important; }
+
+    /* ── Tour ────────────────────────────────── */
+    #tour-welcome {
+      display: none; position: fixed; inset: 0; z-index: 9100;
+      background: rgba(0,0,0,0.82);
+      align-items: center; justify-content: center;
+    }
+    #tour-welcome.active { display: flex; }
+    .tw-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px 28px;
+      max-width: 380px; width: calc(100% - 32px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      text-align: center;
+    }
+    .tw-logo {
+      width: 54px; height: 54px; border-radius: 13px;
+      background: linear-gradient(135deg,#3fb950 0%,#d29922 100%);
+      font-weight: 900; font-size: 12px; color: #000;
+      margin: 0 auto 18px; display: flex; align-items: center; justify-content: center;
+    }
+    .tw-card h2 { font-size: 19px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+    .tw-card p  { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 6px; }
+    .tw-actions { display: flex; flex-direction: column; gap: 9px; margin-top: 22px; }
+    #btn-tour-start {
+      padding: 11px; border-radius: 8px; border: none;
+      background: var(--accent); color: #000;
+      font-size: 13.5px; font-weight: 700; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    #btn-tour-start:hover { opacity: 0.88; }
+    #btn-tour-skip-intro {
+      padding: 10px; border-radius: 8px;
+      border: 1.5px solid var(--border); background: transparent;
+      color: var(--muted); font-size: 12.5px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    #btn-tour-skip-intro:hover { color: var(--text); border-color: var(--muted); }
+
+    /* overlay (transparent, click-blocker) */
+    #tour-overlay {
+      display: none; position: fixed; inset: 0; z-index: 9000;
+      pointer-events: all; background: transparent;
+    }
+    #tour-overlay.active { display: block; }
+    #tour-overlay.dark-bg { background: rgba(0,0,0,0.78); }
+
+    /* spotlight "hole" — box-shadow creates the dark surround */
+    #tour-spot {
+      display: none; position: fixed; z-index: 9001;
+      pointer-events: none; border-radius: 8px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.78);
+      outline: 2px solid rgba(63,185,80,0.65);
+      outline-offset: 1px;
+      transition: left 0.28s ease, top 0.28s ease,
+                  width 0.28s ease, height 0.28s ease,
+                  border-radius 0.18s ease;
+    }
+    #tour-spot.active { display: block; }
+
+    /* tour card */
+    #tour-card {
+      display: none; position: fixed; z-index: 9002;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px 18px 14px;
+      width: 286px;
+      box-shadow: 0 8px 36px rgba(0,0,0,0.55), 0 0 0 1px rgba(63,185,80,0.08);
+    }
+    #tour-card.active { display: block; }
+    #tour-card.tc-center {
+      top: 50% !important; left: 50% !important;
+      transform: translate(-50%,-50%);
+    }
+    .tc-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 11px;
+    }
+    .tc-step-lbl {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    #btn-tour-exit {
+      font-size: 10.5px; color: var(--muted); background: none; border: none;
+      cursor: pointer; padding: 0; transition: color 0.15s;
+    }
+    #btn-tour-exit:hover { color: var(--text); }
+    .tc-title {
+      font-size: 14.5px; font-weight: 700; color: var(--text);
+      margin-bottom: 7px; line-height: 1.3;
+    }
+    .tc-body {
+      font-size: 12.5px; color: var(--muted); line-height: 1.65;
+      margin-bottom: 15px;
+    }
+    .tc-foot {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .tc-btn {
+      padding: 5px 13px; border-radius: 6px;
+      border: 1.5px solid var(--border); background: transparent;
+      color: var(--muted); font-size: 11.5px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .tc-btn:hover { color: var(--text); border-color: var(--muted); }
+    .tc-btn:disabled { opacity: 0.3; pointer-events: none; }
+    .tc-btn.tc-next {
+      border-color: rgba(63,185,80,0.5); color: var(--accent);
+      background: rgba(63,185,80,0.07);
+    }
+    .tc-btn.tc-next:hover { background: rgba(63,185,80,0.14); border-color: var(--accent); }
+    .tc-dots { display: flex; gap: 4px; align-items: center; }
+    .tc-dot {
+      height: 5px; border-radius: 3px; background: var(--border);
+      transition: background 0.2s, width 0.2s;
+      width: 5px;
+    }
+    .tc-dot.active { background: var(--accent); width: 14px; }
+
+    /* help/replay button */
+    #tour-help {
+      position: fixed; bottom: 90px; right: 10px; z-index: 8999;
+      width: 33px; height: 33px; border-radius: 50%;
+      background: var(--surface); border: 1.5px solid var(--border);
+      color: var(--muted); font-size: 14px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35); transition: all 0.15s;
+    }
+    #tour-help:hover { border-color: var(--accent); color: var(--accent); }
+    #tour-help.th-hidden { display: none; }
   </style>
 </head>
 <body>
@@ -1698,6 +1827,304 @@ function showLoader(msg) {
   document.getElementById('loader').classList.add('visible');
 }
 function hideLoader() { document.getElementById('loader').classList.remove('visible'); }
+</script>
+
+<!-- ══════════════════════════ TOUR ══════════════════════════════════════════ -->
+
+<!-- Welcome modal -->
+<div id="tour-welcome">
+  <div class="tw-card">
+    <div class="tw-logo">BB</div>
+    <h2>Welcome to BBoxer</h2>
+    <p>Draw, snap &amp; copy bounding-box coordinates in any CRS — right in the browser, no sign-up needed.</p>
+    <p>Want a quick tour of the interface?</p>
+    <div class="tw-actions">
+      <button id="btn-tour-start">Take the Tour</button>
+      <button id="btn-tour-skip-intro">Skip — I know what I'm doing</button>
+    </div>
+  </div>
+</div>
+
+<!-- Step overlay, spotlight and card -->
+<div id="tour-overlay"></div>
+<div id="tour-spot"></div>
+<div id="tour-card">
+  <div class="tc-head">
+    <span class="tc-step-lbl" id="tc-step-lbl">Step 1 of 10</span>
+    <button id="btn-tour-exit">✕ Exit tour</button>
+  </div>
+  <div class="tc-title" id="tc-title"></div>
+  <div class="tc-body" id="tc-body"></div>
+  <div class="tc-foot">
+    <button class="tc-btn" id="btn-tour-prev" disabled>← Back</button>
+    <div class="tc-dots" id="tc-dots"></div>
+    <button class="tc-btn tc-next" id="btn-tour-next">Next →</button>
+  </div>
+</div>
+
+<!-- Help / replay button -->
+<button id="tour-help" class="th-hidden" title="Replay tour">?</button>
+
+<script>
+/* ─── Tour ─────────────────────────────────────────────────────────────────── */
+(function () {
+  'use strict';
+  const STORAGE_KEY = 'bboxer_tour_v1';
+
+  const STEPS = [
+    {
+      target: '#aoi-toolbar',
+      title: 'Drawing Toolbar',
+      body: 'This floating toolbar gives you four ways to define your Area of Interest. Let\'s walk through each tool.',
+      pos: 'left',
+    },
+    {
+      target: '#tb-bbox',
+      title: 'Draw Bounding Box',
+      body: 'Click this button, then click-drag on the map to draw a rectangle. Release to confirm. Press Esc to cancel at any time.',
+      pos: 'left',
+    },
+    {
+      target: '#tb-poly',
+      title: 'Draw Polygon',
+      body: 'Click to place polygon vertices one by one on the map. Double-click to close the shape. BBoxer computes the minimum bounding rectangle around it.',
+      pos: 'left',
+    },
+    {
+      targetFn: function () { return document.querySelector('#aoi-toolbar label.tb-btn'); },
+      title: 'Upload GeoJSON',
+      body: 'Click to load a .geojson or .json file from your computer. BBoxer automatically extracts the bounding box of any valid GeoJSON geometry.',
+      pos: 'left',
+    },
+    {
+      target: '#tb-country',
+      title: 'Country Picker',
+      body: 'Toggles country mode on the map. Hover over any country to highlight it, then click to snap the bbox to that country\'s full geographic extent.',
+      pos: 'left',
+    },
+    {
+      target: '#tb-clear',
+      title: 'Clear All',
+      body: 'Removes all drawn shapes and resets the coordinates panel so you can start fresh.',
+      pos: 'left',
+    },
+    {
+      targetFn: function () { return document.querySelectorAll('#sidebar .panel-section')[0]; },
+      title: 'Coordinate Reference System',
+      body: 'BBoxer always works in WGS84 (EPSG:4326) by default. Type any EPSG code — e.g. 32633 for UTM Zone 33N — to also receive coordinates projected into that CRS.',
+      pos: 'right',
+    },
+    {
+      targetFn: function () { return document.querySelectorAll('#sidebar .panel-section')[1]; },
+      title: 'Country Mode Toggle',
+      body: 'Another way to enable country mode. The ⓘ button explains how disputed regions like Kashmir, Crimea, and Western Sahara are handled in the dataset.',
+      pos: 'right',
+    },
+    {
+      targetFn: function () {
+        var el = document.getElementById('coords-section');
+        return (el && el.classList.contains('visible')) ? el : null;
+      },
+      title: 'Coordinates Panel',
+      body: 'After drawing an AOI this panel appears here — with your bbox in multiple copy-ready formats: Python list, WKT polygon, GDAL -te, CSV, and more. Adjust precision and axis order to match your tool.',
+      pos: 'right',
+      centerIfNoTarget: true,
+    },
+    {
+      target: '#sidebar-toggle',
+      title: 'Sidebar Toggle',
+      body: 'Need more map space? Click this tab to collapse or expand the sidebar at any time.',
+      pos: 'right',
+    },
+  ];
+
+  var currentStep = 0;
+  var tourActive = false;
+
+  var elWelcome  = document.getElementById('tour-welcome');
+  var elOverlay  = document.getElementById('tour-overlay');
+  var elSpot     = document.getElementById('tour-spot');
+  var elCard     = document.getElementById('tour-card');
+  var elStepLbl  = document.getElementById('tc-step-lbl');
+  var elTitle    = document.getElementById('tc-title');
+  var elBody     = document.getElementById('tc-body');
+  var elDots     = document.getElementById('tc-dots');
+  var btnPrev    = document.getElementById('btn-tour-prev');
+  var btnNext    = document.getElementById('btn-tour-next');
+  var btnExit    = document.getElementById('btn-tour-exit');
+  var btnStart   = document.getElementById('btn-tour-start');
+  var btnSkip    = document.getElementById('btn-tour-skip-intro');
+  var btnHelp    = document.getElementById('tour-help');
+
+  /* build progress dots */
+  function buildDots() {
+    elDots.innerHTML = '';
+    STEPS.forEach(function () {
+      var d = document.createElement('div');
+      d.className = 'tc-dot';
+      elDots.appendChild(d);
+    });
+  }
+
+  function updateDots() {
+    var dots = elDots.querySelectorAll('.tc-dot');
+    dots.forEach(function (d, i) { d.classList.toggle('active', i === currentStep); });
+  }
+
+  /* resolve target element for a step */
+  function getTarget(step) {
+    if (step.targetFn) return step.targetFn();
+    if (step.target) return document.querySelector(step.target);
+    return null;
+  }
+
+  /* position spotlight over element */
+  function placeSpot(el) {
+    if (!el) {
+      elSpot.classList.remove('active');
+      return;
+    }
+    var PAD = 6;
+    var r = el.getBoundingClientRect();
+    var cs = window.getComputedStyle(el);
+    elSpot.style.left   = (r.left - PAD) + 'px';
+    elSpot.style.top    = (r.top  - PAD) + 'px';
+    elSpot.style.width  = (r.width  + PAD * 2) + 'px';
+    elSpot.style.height = (r.height + PAD * 2) + 'px';
+    elSpot.style.borderRadius = cs.borderRadius || '8px';
+    elSpot.classList.add('active');
+  }
+
+  /* position tour card relative to target element */
+  function placeCard(el, pos, center) {
+    elCard.style.transform = '';
+    elCard.classList.remove('tc-center');
+
+    if (center || !el) {
+      elCard.classList.add('tc-center');
+      return;
+    }
+
+    var MARGIN = 14;
+    var CW = 286;
+    var r  = el.getBoundingClientRect();
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var ch = elCard.offsetHeight || 200;
+    var left, top;
+
+    if (pos === 'right') {
+      left = r.right + MARGIN;
+      if (left + CW > vw - 8) left = r.left - CW - MARGIN;
+    } else {
+      left = r.left - CW - MARGIN;
+      if (left < 8) left = r.right + MARGIN;
+    }
+
+    top = r.top + r.height / 2 - ch / 2;
+    left = Math.max(8, Math.min(left, vw - CW - 8));
+    top  = Math.max(8, Math.min(top,  vh - ch - 8));
+
+    elCard.style.left = left + 'px';
+    elCard.style.top  = top  + 'px';
+  }
+
+  /* render a step */
+  function showStep(idx) {
+    var step = STEPS[idx];
+    var total = STEPS.length;
+
+    elStepLbl.textContent = 'Step ' + (idx + 1) + ' of ' + total;
+    elTitle.textContent   = step.title;
+    elBody.textContent    = step.body;
+
+    btnPrev.disabled = (idx === 0);
+    var isLast = (idx === total - 1);
+    btnNext.textContent = isLast ? 'Done ✓' : 'Next →';
+
+    var target = getTarget(step);
+    var useCenter = (!target && step.centerIfNoTarget) || !target;
+
+    /* dark overlay when no spotlight, transparent when spotlight active */
+    elOverlay.classList.toggle('dark-bg', !target);
+
+    placeSpot(target);
+    elCard.classList.add('active');
+    /* run positioning after paint so offsetHeight is correct */
+    requestAnimationFrame(function () { placeCard(target, step.pos, useCenter); });
+    updateDots();
+  }
+
+  function goTo(idx) {
+    currentStep = Math.max(0, Math.min(idx, STEPS.length - 1));
+    showStep(currentStep);
+  }
+
+  function startTour() {
+    tourActive = true;
+    currentStep = 0;
+    elOverlay.classList.add('active');
+    elCard.classList.add('active');
+    btnHelp.classList.add('th-hidden');
+    buildDots();
+    showStep(0);
+  }
+
+  function endTour() {
+    tourActive = false;
+    elOverlay.classList.remove('active', 'dark-bg');
+    elSpot.classList.remove('active');
+    elCard.classList.remove('active', 'tc-center');
+    btnHelp.classList.remove('th-hidden');
+    localStorage.setItem(STORAGE_KEY, '1');
+  }
+
+  function showWelcome() {
+    elWelcome.classList.add('active');
+    btnHelp.classList.add('th-hidden');
+  }
+
+  function hideWelcome() {
+    elWelcome.classList.remove('active');
+  }
+
+  /* reposition on window resize */
+  window.addEventListener('resize', function () {
+    if (!tourActive) return;
+    var step = STEPS[currentStep];
+    var target = getTarget(step);
+    var useCenter = !target;
+    placeSpot(target);
+    placeCard(target, step.pos, useCenter);
+  });
+
+  /* wire buttons */
+  btnStart.addEventListener('click', function () { hideWelcome(); startTour(); });
+  btnSkip.addEventListener('click', function () {
+    hideWelcome();
+    btnHelp.classList.remove('th-hidden');
+    localStorage.setItem(STORAGE_KEY, '1');
+  });
+  btnPrev.addEventListener('click', function () { goTo(currentStep - 1); });
+  btnNext.addEventListener('click', function () {
+    if (currentStep === STEPS.length - 1) { endTour(); }
+    else { goTo(currentStep + 1); }
+  });
+  btnExit.addEventListener('click', endTour);
+  btnHelp.addEventListener('click', showWelcome);
+
+  /* Escape closes tour */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && tourActive) endTour();
+  });
+
+  /* auto-show on first visit */
+  if (!localStorage.getItem(STORAGE_KEY)) {
+    setTimeout(showWelcome, 900);
+  } else {
+    btnHelp.classList.remove('th-hidden');
+  }
+}());
 </script>
 </body>
 </html>
