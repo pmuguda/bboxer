@@ -49,3 +49,8 @@ python3 -m http.server 8000
 ## License
 
 MIT — made by [Pavan Muguda](https://pmuguda.github.io)
+
+## Acknowledgements
+This project was developed with AI assistance (Claude by Anthropic) for code 
+generation and debugging. Architecture decisions, refinements, and 
+ongoing maintenance are made by me.
