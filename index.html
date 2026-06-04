@@ -1828,9 +1828,17 @@ function showLoader(msg) {
 }
 function hideLoader() { document.getElementById('loader').classList.remove('visible'); }
 
+/* Called by the tour to demo the Country Picker step */
+function tourSelectDemoCountry() {
+  var france = [-5.1, 42.3, 8.2, 51.1];
+  map.getSource('aoi')?.setData(bboxToFC(france));
+  commitBbox(france, 'France', 'country');
+  map.fitBounds([[france[0], france[1]], [france[2], france[3]]], { padding: 60, duration: 600 });
+}
+
 /* Called by the tour when it needs to demo the Coordinates panel */
 function tourDrawDemoBbox() {
-  var demo = [-10, 36, 42, 65]; /* Western Europe */
+  var demo = [-10, 36, 42, 65]; /* Western Europe — fallback if no country was picked */
   map.getSource('aoi')?.setData(bboxToFC(demo));
   commitBbox(demo, 'Demo — Europe', 'bbox');
   map.fitBounds([[demo[0], demo[1]], [demo[2], demo[3]]], { padding: 60, duration: 600 });
@@ -1907,8 +1915,14 @@ function tourDrawDemoBbox() {
     {
       target: '#tb-country',
       title: 'Country Picker',
-      body: 'Toggles country mode on the map. Hover over any country to highlight it, then click to snap the bbox to that country\'s full geographic extent.',
+      body: 'Toggles country mode on the map. Hover over any country to highlight it, then click to snap the bbox to that country\'s full extent — like France here!',
       pos: 'left',
+      onEnter: function () {
+        if (!document.getElementById('coords-section').classList.contains('visible')) {
+          tourDemoDrawn = true;
+          if (typeof tourSelectDemoCountry === 'function') tourSelectDemoCountry();
+        }
+      },
     },
     {
       target: '#tb-clear',
@@ -1940,7 +1954,7 @@ function tourDrawDemoBbox() {
         }
       },
       title: 'Coordinates Panel',
-      body: 'We drew a demo bbox over Europe so you can see this in action. Your coordinates appear in multiple copy-ready formats: Python list, WKT, GDAL -te, CSV, and more. Adjust precision and axis order to match your tool.',
+      body: 'Your bbox coordinates are live here. Copy them in multiple formats: Python list, WKT polygon, GDAL -te, CSV, and more. Use the precision slider and axis-order toggle to match your tool.',
       pos: 'right',
     },
     {
