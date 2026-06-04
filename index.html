@@ -1827,6 +1827,14 @@ function showLoader(msg) {
   document.getElementById('loader').classList.add('visible');
 }
 function hideLoader() { document.getElementById('loader').classList.remove('visible'); }
+
+/* Called by the tour when it needs to demo the Coordinates panel */
+function tourDrawDemoBbox() {
+  var demo = [-10, 36, 42, 65]; /* Western Europe */
+  map.getSource('aoi')?.setData(bboxToFC(demo));
+  commitBbox(demo, 'Demo — Europe', 'bbox');
+  map.fitBounds([[demo[0], demo[1]], [demo[2], demo[3]]], { padding: 60, duration: 600 });
+}
 </script>
 
 <!-- ══════════════════════════ TOUR ══════════════════════════════════════════ -->
@@ -1925,10 +1933,15 @@ function hideLoader() { document.getElementById('loader').classList.remove('visi
         var el = document.getElementById('coords-section');
         return (el && el.classList.contains('visible')) ? el : null;
       },
+      onEnter: function () {
+        if (!document.getElementById('coords-section').classList.contains('visible')) {
+          tourDemoDrawn = true;
+          if (typeof tourDrawDemoBbox === 'function') tourDrawDemoBbox();
+        }
+      },
       title: 'Coordinates Panel',
-      body: 'After drawing an AOI this panel appears here — with your bbox in multiple copy-ready formats: Python list, WKT polygon, GDAL -te, CSV, and more. Adjust precision and axis order to match your tool.',
+      body: 'We drew a demo bbox over Europe so you can see this in action. Your coordinates appear in multiple copy-ready formats: Python list, WKT, GDAL -te, CSV, and more. Adjust precision and axis order to match your tool.',
       pos: 'right',
-      centerIfNoTarget: true,
     },
     {
       target: '#sidebar-toggle',
@@ -1940,6 +1953,7 @@ function hideLoader() { document.getElementById('loader').classList.remove('visi
 
   var currentStep = 0;
   var tourActive = false;
+  var tourDemoDrawn = false;
 
   var elWelcome  = document.getElementById('tour-welcome');
   var elOverlay  = document.getElementById('tour-overlay');
@@ -2042,17 +2056,24 @@ function hideLoader() { document.getElementById('loader').classList.remove('visi
     var isLast = (idx === total - 1);
     btnNext.textContent = isLast ? 'Done ✓' : 'Next →';
 
-    var target = getTarget(step);
-    var useCenter = (!target && step.centerIfNoTarget) || !target;
-
-    /* dark overlay when no spotlight, transparent when spotlight active */
-    elOverlay.classList.toggle('dark-bg', !target);
-
-    placeSpot(target);
     elCard.classList.add('active');
-    /* run positioning after paint so offsetHeight is correct */
-    requestAnimationFrame(function () { placeCard(target, step.pos, useCenter); });
     updateDots();
+
+    if (step.onEnter) {
+      step.onEnter();
+      /* Re-resolve target after onEnter may have mutated the DOM */
+      setTimeout(function () {
+        var target = getTarget(step);
+        elOverlay.classList.toggle('dark-bg', !target);
+        placeSpot(target);
+        placeCard(target, step.pos, !target);
+      }, 200);
+    } else {
+      var target = getTarget(step);
+      elOverlay.classList.toggle('dark-bg', !target);
+      placeSpot(target);
+      requestAnimationFrame(function () { placeCard(target, step.pos, !target); });
+    }
   }
 
   function goTo(idx) {
@@ -2077,6 +2098,10 @@ function hideLoader() { document.getElementById('loader').classList.remove('visi
     elCard.classList.remove('active', 'tc-center');
     btnHelp.classList.remove('th-hidden');
     localStorage.setItem(STORAGE_KEY, '1');
+    if (tourDemoDrawn) {
+      tourDemoDrawn = false;
+      if (typeof clearAll === 'function') clearAll();
+    }
   }
 
   function showWelcome() {
