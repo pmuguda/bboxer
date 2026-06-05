@@ -1,0 +1,16 @@
+{
+  "name": "BBoxer",
+  "short_name": "BBoxer",
+  "description": "Draw, snap & copy bounding-box coordinates in any EPSG",
+  "start_url": "/bboxer/",
+  "scope": "/bboxer/",
+  "display": "standalone",
+  "background_color": "#1b2031",
+  "theme_color": "#1b2031",
+  "orientation": "any",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
