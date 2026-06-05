@@ -83,24 +83,28 @@
       --accent-2: oklch(0.83 0.135 82 / 0.16);
       --accent-3: oklch(0.83 0.135 82 / 0.45);
       --red:      oklch(0.65 0.20 25);
+      --shadow:   0 18px 50px -24px oklch(0 0 0 / 0.85);
+      --amber:    oklch(0.75 0.16 70);
       --sidebar-w: 320px;
       --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
       --font-cond: 'IBM Plex Sans Condensed', 'IBM Plex Mono', sans-serif;
     }
 
     [data-theme="paper"] {
-      --bg:       oklch(0.97 0.006 95);
+      --bg:       oklch(0.95 0.006 95);
       --surface:  oklch(0.975 0.005 95);
-      --bg-3:     oklch(0.93 0.008 95);
+      --bg-3:     oklch(0.915 0.008 95);
       --border:   oklch(0.83 0.012 95);
       --border-2: oklch(0.70 0.014 95);
-      --text:     oklch(0.22 0.012 255);
-      --text-2:   oklch(0.40 0.013 255);
-      --muted:    oklch(0.55 0.012 255);
+      --text:     oklch(0.27 0.012 255);
+      --text-2:   oklch(0.44 0.013 255);
+      --muted:    oklch(0.57 0.012 255);
       --accent:   oklch(0.58 0.155 52);
       --accent-2: oklch(0.58 0.155 52 / 0.14);
       --accent-3: oklch(0.58 0.155 52 / 0.50);
       --red:      oklch(0.55 0.20 25);
+      --shadow:   0 18px 50px -28px oklch(0 0 0 / 0.35);
+      --amber:    oklch(0.62 0.17 65);
     }
 
     html, body { height: 100%; width: 100%; overflow: hidden; }
@@ -149,34 +153,41 @@
 
     /* ── Header / Brand ─────────────────────── */
     .sidebar-header {
-      display: flex; align-items: center; gap: 11px;
-      padding: 14px 16px 13px;
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 20px 20px 18px;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
     .logo-mark {
-      width: 40px; height: 40px; flex-shrink: 0; overflow: hidden;
+      width: 46px; height: 46px; flex-shrink: 0; overflow: hidden;
     }
-    .logo-mark img { width: 40px; height: 40px; display: block; }
-    .sidebar-header > div:nth-child(2) { flex: 1; min-width: 0; }
+    .logo-mark img { width: 46px; height: 46px; display: block; }
+    .sidebar-brand {
+      flex: 1; min-width: 0; min-height: 46px;
+      display: flex; flex-direction: column;
+    }
     .sidebar-header h1 {
-      font-family: var(--font-cond); font-weight: 700; font-size: 18px;
-      letter-spacing: 0.02em; color: var(--text); line-height: 1;
-      display: flex; align-items: baseline; gap: 0.05em;
+      font-family: var(--font-cond); font-weight: 700; font-size: 20px;
+      letter-spacing: 0.01em; color: var(--text); line-height: 1;
+      display: flex; align-items: baseline; gap: 0.08em;
     }
     .header-sep { color: var(--accent); font-weight: 600; }
     .sidebar-header p {
-      margin-top: 5px; font-size: 9px; letter-spacing: 0.14em;
-      text-transform: uppercase; color: var(--muted);
+      margin-top: auto; padding-top: 8px;
+      font-size: 10px; letter-spacing: 0.04em; line-height: 1.35;
+      color: var(--text-2);
     }
-    .header-right { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+    .header-right {
+      display: flex; align-items: flex-start; gap: 5px; flex-shrink: 0;
+      padding-top: 1px;
+    }
     .theme-toggle {
       display: flex; border: 1px solid var(--border); height: 22px;
-      font-family: var(--font-mono); font-size: 8.5px; letter-spacing: .1em;
+      font-family: var(--font-mono); font-size: 8.5px; letter-spacing: .08em;
     }
     .theme-toggle button {
       appearance: none; background: transparent; border: 0; color: var(--muted);
-      padding: 0 6px; cursor: pointer; font: inherit; text-transform: uppercase;
+      padding: 0 7px; cursor: pointer; font: inherit; text-transform: uppercase;
     }
     .theme-toggle button + button { border-left: 1px solid var(--border); }
     .theme-toggle button[aria-pressed="true"] { background: var(--accent); color: oklch(0.15 0.008 250); font-weight: 600; }
@@ -287,8 +298,6 @@
     }
     .toggle-switch input:checked ~ .toggle-track { background: oklch(0.83 0.135 82 / 0.25); border-color: var(--accent); }
     .toggle-switch input:checked ~ .toggle-thumb { transform: translateX(14px); background: var(--accent); }
-    #country-hint { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.55; letter-spacing: 0.02em; }
-
     /* ── Coordinates section ────────────────── */
     #coords-section { display: none; }
     #coords-section.visible { display: block; }
@@ -420,26 +429,40 @@
       border-top: 1px solid var(--border); flex-shrink: 0;
       letter-spacing: 0.06em;
     }
-.footer-meta {
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    .footer-meta {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-bottom: 8px;
     }
-    .footer-author { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
+    .footer-byline {
+      min-width: 0;
+      font-size: 10px; color: var(--muted); letter-spacing: 0.05em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .footer-author {
+      color: var(--text-2); text-decoration: underline;
+      text-underline-offset: 2px; text-decoration-thickness: 1px;
+    }
     .footer-icons { display: flex; align-items: center; gap: 6px; }
     .footer-icon-link {
       display: flex; align-items: center; justify-content: center;
-      width: 28px; height: 28px;
-      border: 1px solid var(--border); color: var(--muted);
-      text-decoration: none; transition: color 0.15s, border-color 0.15s;
+      width: 26px; height: 26px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+      text-decoration: none; transition: color 0.15s, border-color 0.15s, background 0.15s;
     }
-    .footer-icon-link:hover { color: var(--accent); border-color: var(--accent); }
+    .footer-icon-link:hover { background: var(--bg-3); color: var(--accent); border-color: var(--accent); }
+    .footer-support {
+      display: inline-block;
+      font-size: 10px; color: var(--muted);
+      letter-spacing: 0.06em; text-decoration: none;
+    }
+    .footer-support:hover { color: var(--accent); }
 
     /* ── Sidebar toggle tab ────────────────── */
     #sidebar-toggle {
       position: fixed; left: var(--sidebar-w); top: 50%;
       transform: translateY(-50%);
-      z-index: 30; width: 16px; height: 48px; padding: 0;
+      z-index: 30; width: 22px; height: 46px; padding: 0;
       background: var(--surface); border: 1px solid var(--border);
-      border-left: none;
       color: var(--muted); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: left 0.28s ease, color 0.15s, border-color 0.15s;
@@ -453,22 +476,22 @@
     #aoi-toolbar {
       position: fixed; top: 14px; right: 16px; z-index: 20;
       display: flex; align-items: center; gap: 1px;
-      background: var(--surface); border: 1px solid var(--border);
+      background: oklch(from var(--surface) l c h / .9); border: 1px solid var(--border);
       padding: 3px;
-      box-shadow: 0 18px 50px -24px oklch(0 0 0 / 0.85);
+      box-shadow: var(--shadow);
     }
     .tb-btn {
-      width: 32px; height: 32px;
+      width: 30px; height: 30px;
       border: 1px solid transparent; background: transparent;
       color: var(--muted); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: all 0.15s;
     }
     .tb-btn svg { width: 15px; height: 15px; pointer-events: none; }
-    .tb-btn:hover        { color: var(--accent); background: var(--accent-2); border-color: oklch(0.83 0.135 82 / 0.4); }
+    .tb-btn:hover        { color: var(--accent); background: var(--accent-2); border-color: var(--accent-3); }
     .tb-btn.active       { color: var(--accent); background: var(--accent-2); border-color: var(--accent); }
-    .tb-btn.country-on   { color: var(--accent); background: var(--accent-2); border-color: var(--accent); }
-    .tb-btn.country-on:hover { color: var(--accent); background: oklch(0.83 0.135 82 / 0.25); border-color: var(--accent); }
+    .tb-btn.country-on   { color: var(--amber); background: oklch(from var(--amber) l c h / .12); border-color: oklch(from var(--amber) l c h / .5); }
+    .tb-btn.country-on:hover { color: var(--amber); background: oklch(from var(--amber) l c h / .18); border-color: var(--amber); }
     .tb-btn.tb-clear:hover   { color: var(--red); background: oklch(0.65 0.20 25 / 0.08); border-color: oklch(0.65 0.20 25 / 0.4); }
     .tb-divider { width: 1px; height: 16px; background: var(--border); margin: 0 2px; }
 
@@ -591,9 +614,9 @@
       width: 42px; height: 42px; flex-shrink: 0;
       border: 1px solid var(--tw-acc);
       display: flex; align-items: center; justify-content: center;
-      font-weight: 600; font-size: 10.5px; letter-spacing: .06em;
-      color: var(--tw-acc);
+      overflow: hidden; color: var(--tw-acc);
     }
+    .tw-mark img { width: 100%; height: 100%; display: block; object-fit: cover; }
     .tw-wordmark {
       font-family: 'IBM Plex Sans Condensed', 'IBM Plex Mono', sans-serif;
       font-weight: 700; font-size: 18px; letter-spacing: .02em;
@@ -734,17 +757,21 @@
     }
     .tc-dot.active { background: var(--tw-acc); width: 10px; }
 
-    /* ── Help / replay button (lives in header) ── */
+    /* ── Help / replay button ── */
     #tour-help {
-      width: 22px; height: 22px; flex-shrink: 0;
-      background: var(--bg-3); border: 1px solid var(--border);
-      color: var(--muted); font-family: var(--font-mono);
+      position: fixed; top: 16px; left: calc(var(--sidebar-w) + 16px);
+      z-index: 40;
+      width: 32px; height: 32px; flex-shrink: 0;
+      background: oklch(from var(--surface) l c h / .86); border: 1px solid var(--border);
+      color: var(--text-2); font-family: var(--font-mono);
       font-size: 12px; font-weight: 600;
+      box-shadow: var(--shadow);
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: border-color .15s, color .15s;
+      transition: left 0.28s, border-color .15s, color .15s;
     }
     #tour-help:hover { border-color: var(--accent); color: var(--accent); }
     #tour-help.th-hidden { display: none; }
+    body.sidebar-collapsed #tour-help { left: 16px; }
   </style>
 </head>
 <body>
@@ -753,7 +780,7 @@
 <aside id="sidebar">
   <header class="sidebar-header">
     <div class="logo-mark"><img src="logo.svg" alt="BBoxer"></div>
-    <div>
+    <div class="sidebar-brand">
       <h1>b<span class="header-sep">·</span>boxer</h1>
       <p>Bounding-box discovery console</p>
     </div>
@@ -762,7 +789,6 @@
         <button data-theme-btn="dark" aria-pressed="true">DARK</button>
         <button data-theme-btn="paper" aria-pressed="false">PAPER</button>
       </div>
-      <button id="tour-help" class="th-hidden" title="Replay tour">?</button>
     </div>
   </header>
 
@@ -781,40 +807,9 @@
     <div id="epsg-status"></div>
   </div>
 
-
-  <!-- Country Picker -->
-  <div class="panel-section">
-    <div class="mod-h"><span class="ix">02</span><span class="ttl">Country Picker</span><span class="rule"></span></div>
-    <div class="toggle-row">
-      <span class="toggle-label">
-        Enable country mode
-        <button class="info-btn" id="country-info-btn" title="About disputed regions" aria-label="About disputed regions">
-          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="7" cy="7" r="6"/>
-            <path d="M7 6.5v3.5"/>
-            <circle cx="7" cy="4.2" r="0.7" fill="currentColor" stroke="none"/>
-          </svg>
-        </button>
-      </span>
-      <label class="toggle-switch" title="Toggle country picker">
-        <input type="checkbox" id="country-toggle">
-        <div class="toggle-track"></div>
-        <div class="toggle-thumb"></div>
-      </label>
-    </div>
-    <p id="country-hint" class="section-hint" style="display:none">Hover to highlight a country · Click to snap a bbox around it</p>
-    <div class="info-popover" id="country-info-pop" hidden>
-      Disputed regions (Kashmir, Aksai Chin, Western Sahara, Crimea, Golan, N.&nbsp;Cyprus, …) are masked in
-      <span style="color:#d96b72">dark red with a dashed border</span>
-      and are <em>not</em> visually assigned to any country.
-      <br><br>
-      <strong>Note:</strong> the underlying country bbox follows Natural Earth's territorial classification and <em>may</em> still extend through disputed areas — verify against your authoritative source before using in official work.
-    </div>
-  </div>
-
   <!-- Coordinates -->
   <div class="panel-section" id="coords-section">
-    <div class="mod-h"><span class="ix">03</span><span class="ttl">Coordinates</span><span class="rule"></span></div>
+    <div class="mod-h"><span class="ix">02</span><span class="ttl">Coordinates</span><span class="rule"></span></div>
 
     <div class="coord-meta">
       <svg class="coord-type-icon" id="coord-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -866,7 +861,9 @@
   <!-- Footer -->
   <footer class="sidebar-footer">
     <div class="footer-meta">
-      <span class="footer-author">by Pavan Muguda Sanjeevamurthy</span>
+      <div class="footer-byline">
+        By <a href="https://pmuguda.github.io" target="_blank" rel="noopener" class="footer-author">Pavan Muguda Sanjeevamurthy</a>
+      </div>
       <span class="footer-icons">
         <a href="https://github.com/pmuguda/bboxer" target="_blank" rel="noopener" title="GitHub" class="footer-icon-link">
           <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-label="GitHub">
@@ -882,8 +879,11 @@
         </a>
       </span>
     </div>
+    <a href="https://ko-fi.com/pavan_muguda" target="_blank" rel="noopener" class="footer-support">if it helped, support me on Ko-fi</a>
   </footer>
 </aside>
+
+<button id="tour-help" class="th-hidden" title="Replay tour">?</button>
 
 <!-- Sidebar toggle -->
 <button id="sidebar-toggle" title="Toggle sidebar" aria-label="Toggle sidebar">
@@ -1796,16 +1796,6 @@ document.querySelectorAll('.order-pill').forEach(btn => {
   });
 });
 
-/* Info button toggles the disputed-regions popover */
-document.getElementById('country-info-btn').addEventListener('click', (e) => {
-  e.stopPropagation();
-  const pop = document.getElementById('country-info-pop');
-  const btn = document.getElementById('country-info-btn');
-  const open = pop.hasAttribute('hidden');
-  pop.toggleAttribute('hidden', !open);
-  btn.classList.toggle('active', open);
-});
-
 /* ─── Draw mode management ───────────────────────────────────────────────── */
 function setDrawMode(mode) {
   drawMode = mode;
@@ -1835,9 +1825,7 @@ function deactivateDraw() { setDrawMode(null); }
 
 function setCountryMode(on) {
   countryMode = on;
-  document.getElementById('country-toggle').checked = on;
   document.getElementById('tb-country').classList.toggle('country-on', on);
-  document.getElementById('country-hint').style.display = on ? 'block' : 'none';
 
   if (on) {
     document.body.classList.add('mode-country');
@@ -1929,7 +1917,6 @@ document.getElementById('tb-poly').addEventListener('click',   () => toggleDraw(
 document.getElementById('tb-clear').addEventListener('click',  clearAll);
 document.getElementById('tb-upload').addEventListener('change', (e) => { handleUpload(e.target.files[0]); e.target.value=''; });
 
-document.getElementById('country-toggle').addEventListener('change', (e) => setCountryMode(e.target.checked));
 document.getElementById('tb-country').addEventListener('click', () => setCountryMode(!countryMode));
 
 document.getElementById('sidebar-toggle').addEventListener('click', () => document.body.classList.toggle('sidebar-collapsed'));
@@ -2063,7 +2050,7 @@ function tourDrawDemoBbox() {
 <div id="tour-welcome">
   <div class="tw-card">
     <div class="tw-hd">
-      <div class="tw-mark">BB</div>
+      <div class="tw-mark"><img src="logo.svg" alt="BBoxer"></div>
       <div>
         <div class="tw-wordmark">B<span class="tw-sep">·</span>Boxer</div>
         <div class="tw-sub">Bounding-box discovery console</div>
@@ -2168,13 +2155,6 @@ function tourDrawDemoBbox() {
       short: 'CRS',
       title: 'Coordinate Reference System',
       body: 'BBoxer always works in WGS84 (EPSG:4326) by default. Type any EPSG code — e.g. 32633 for UTM Zone 33N — to also receive coordinates projected into that CRS.',
-      pos: 'right',
-    },
-    {
-      targetFn: function () { return document.querySelectorAll('#sidebar .panel-section')[1]; },
-      short: 'CTRY MODE',
-      title: 'Country Mode Toggle',
-      body: 'Another way to enable country mode. The ⓘ button explains how disputed regions like Kashmir, Crimea, and Western Sahara are handled in the dataset.',
       pos: 'right',
     },
     {
