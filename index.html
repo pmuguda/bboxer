@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -81,6 +81,21 @@
       --font-cond: 'IBM Plex Sans Condensed', 'IBM Plex Mono', sans-serif;
     }
 
+    [data-theme="paper"] {
+      --bg:       oklch(0.97 0.006 95);
+      --surface:  oklch(0.975 0.005 95);
+      --bg-3:     oklch(0.93 0.008 95);
+      --border:   oklch(0.83 0.012 95);
+      --border-2: oklch(0.70 0.014 95);
+      --text:     oklch(0.22 0.012 255);
+      --text-2:   oklch(0.40 0.013 255);
+      --muted:    oklch(0.55 0.012 255);
+      --accent:   oklch(0.58 0.155 52);
+      --accent-2: oklch(0.58 0.155 52 / 0.14);
+      --accent-3: oklch(0.58 0.155 52 / 0.50);
+      --red:      oklch(0.55 0.20 25);
+    }
+
     html, body { height: 100%; width: 100%; overflow: hidden; }
     body {
       display: flex;
@@ -127,28 +142,41 @@
 
     /* ── Header / Brand ─────────────────────── */
     .sidebar-header {
-      display: flex; align-items: center; gap: 13px;
-      padding: 18px 20px 16px;
+      display: flex; align-items: center; gap: 11px;
+      padding: 14px 16px 13px;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
     .logo-mark {
-      width: 44px; height: 44px; flex-shrink: 0;
+      width: 40px; height: 40px; flex-shrink: 0;
       border: 1px solid var(--accent);
       display: flex; align-items: center; justify-content: center;
       font-weight: 600; font-size: 11px; letter-spacing: 0.06em;
       color: var(--accent); user-select: none; font-family: var(--font-mono);
     }
+    .sidebar-header > div:nth-child(2) { flex: 1; min-width: 0; }
     .sidebar-header h1 {
-      font-family: var(--font-cond); font-weight: 700; font-size: 20px;
+      font-family: var(--font-cond); font-weight: 700; font-size: 18px;
       letter-spacing: 0.02em; color: var(--text); line-height: 1;
       display: flex; align-items: baseline; gap: 0.05em;
     }
     .header-sep { color: var(--accent); font-weight: 600; }
     .sidebar-header p {
-      margin-top: 7px; font-size: 9.5px; letter-spacing: 0.16em;
+      margin-top: 5px; font-size: 9px; letter-spacing: 0.14em;
       text-transform: uppercase; color: var(--muted);
     }
+    .header-right { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+    .theme-toggle {
+      display: flex; border: 1px solid var(--border); height: 22px;
+      font-family: var(--font-mono); font-size: 8.5px; letter-spacing: .1em;
+    }
+    .theme-toggle button {
+      appearance: none; background: transparent; border: 0; color: var(--muted);
+      padding: 0 6px; cursor: pointer; font: inherit; text-transform: uppercase;
+    }
+    .theme-toggle button + button { border-left: 1px solid var(--border); }
+    .theme-toggle button[aria-pressed="true"] { background: var(--accent); color: oklch(0.15 0.008 250); font-weight: 600; }
+    .theme-toggle button:hover:not([aria-pressed="true"]) { color: var(--text); }
 
     /* ── Module section headers ─────────────── */
     .panel-section {
@@ -702,20 +730,16 @@
     }
     .tc-dot.active { background: var(--tw-acc); width: 10px; }
 
-    /* ── Help / replay button ── */
+    /* ── Help / replay button (lives in header) ── */
     #tour-help {
-      position: fixed; bottom: 90px; right: 10px; z-index: 8999;
-      width: 32px; height: 32px;
-      background: oklch(0.182 0.009 250); border: 1px solid oklch(0.31 0.012 250);
-      color: oklch(0.71 0.011 250); font-family: 'IBM Plex Mono', monospace;
-      font-size: 13px; font-weight: 600;
+      width: 22px; height: 22px; flex-shrink: 0;
+      background: var(--bg-3); border: 1px solid var(--border);
+      color: var(--muted); font-family: var(--font-mono);
+      font-size: 12px; font-weight: 600;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 10px 28px -8px oklch(0 0 0 / 0.7);
       transition: border-color .15s, color .15s;
     }
-    #tour-help:hover {
-      border-color: oklch(0.83 0.135 82); color: oklch(0.83 0.135 82);
-    }
+    #tour-help:hover { border-color: var(--accent); color: var(--accent); }
     #tour-help.th-hidden { display: none; }
   </style>
 </head>
@@ -726,8 +750,15 @@
   <header class="sidebar-header">
     <div class="logo-mark">BB</div>
     <div>
-      <h1>B<span class="header-sep">·</span>BOXER</h1>
+      <h1>b<span class="header-sep">·</span>boxer</h1>
       <p>Bounding-box discovery console</p>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle" role="group" aria-label="Theme">
+        <button data-theme-btn="dark" aria-pressed="true">DARK</button>
+        <button data-theme-btn="paper" aria-pressed="false">PAPER</button>
+      </div>
+      <button id="tour-help" class="th-hidden" title="Replay tour">?</button>
     </div>
   </header>
 
@@ -988,6 +1019,9 @@ let order          = 'wsen'; // 'wsen' (minX,minY,maxX,maxY) | 'wesn' (minX,maxX
 let dlCrs          = '4326'; // '4326' | 'custom' — which CRS the download button writes
 let coordLabel     = '';
 let coordType      = 'bbox'; // 'bbox' | 'poly' | 'upload' | 'country'
+let _currentAoiFC  = null;   // cached for theme-change restoration
+let _countriesFC   = null;
+let _disputedFC    = null;
 
 /* ─── Map init ───────────────────────────────────────────────────────────── */
 const map = new maplibregl.Map({
@@ -1290,7 +1324,7 @@ map.on('mouseup', (e) => {
   bboxAnchor = null;
   clearPreview();
   if (Math.abs(bbox[2]-bbox[0]) < 0.001 && Math.abs(bbox[3]-bbox[1]) < 0.001) return;
-  map.getSource('aoi').setData(bboxToFC(bbox));
+  setAoiData(bboxToFC(bbox));
   commitBbox(bbox, 'Drawn BBox', 'bbox');
   deactivateDraw();
 });
@@ -1311,7 +1345,7 @@ map.on('dblclick', (e) => {
   const fc = { type:'FeatureCollection', features:[{
     type:'Feature', geometry:{ type:'Polygon', coordinates:[[...verts, verts[0]]] }, properties:{}
   }]};
-  map.getSource('aoi').setData(fc);
+  setAoiData(fc);
   const lngs = verts.map(v => v[0]), lats = verts.map(v => v[1]);
   commitBbox([Math.min(...lngs),Math.min(...lats),Math.max(...lngs),Math.max(...lats)], 'Drawn Polygon', 'poly');
   deactivateDraw();
@@ -1367,7 +1401,7 @@ function handleCountryClick(e) {
   map.setFeatureState({ source:'countries', id: selectedId }, { selected: true, hovered: false });
 
   /* draw a bbox rectangle (not the country polygon) around the country */
-  map.getSource('aoi').setData(bboxToFC(bbox));
+  setAoiData(bboxToFC(bbox));
   commitBbox(bbox, name, 'country');
   map.fitBounds([[bbox[0],bbox[1]],[bbox[2],bbox[3]]], { padding:60, maxZoom:8, duration:700 });
 }
@@ -1432,6 +1466,7 @@ async function loadCountries() {
        across the bottom of the map. Country picking for Antarctica isn't
        a meaningful workflow anyway. */
     geojson.features = geojson.features.filter(f => f.id !== 10);
+    _countriesFC = geojson;
     map.getSource('countries').setData(geojson);
 
     /* Fetch disputed-areas overlay (Natural Earth 50m). Includes Kashmir,
@@ -1442,6 +1477,7 @@ async function loadCountries() {
       const dRes = await fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_admin_0_breakaway_disputed_areas.geojson');
       const dGeo = await dRes.json();
       dGeo.features.forEach(f => unwrapAntimeridian(f.geometry));
+      _disputedFC = dGeo;
       map.getSource('disputed').setData(dGeo);
     } catch (_) { /* overlay is best-effort */ }
 
@@ -1833,7 +1869,7 @@ function clearAll() {
     map.setFeatureState({ source:'countries', id: selectedId }, { selected: false, hovered: false });
     selectedId = null;
   }
-  map.getSource('aoi')?.setData(emptyFC());
+  setAoiData(emptyFC());
   map.getSource('aoi-bbox')?.setData(emptyFC());
   clearPreview();
   document.getElementById('coords-section').classList.remove('visible');
@@ -1868,7 +1904,7 @@ function handleUpload(file) {
       else if (raw.type === 'Feature')       fc = { type:'FeatureCollection', features:[raw] };
       else fc = { type:'FeatureCollection', features:[{ type:'Feature', geometry:raw, properties:{} }] };
 
-      map.getSource('aoi').setData(fc);
+      setAoiData(fc);
       commitBbox(bbox, file.name.replace(/\.(geo)?json$/i,''), 'upload');
       map.fitBounds([[bbox[0],bbox[1]],[bbox[2],bbox[3]]], { padding:60, maxZoom:12, duration:700 });
     } catch (_) { showHint('Invalid GeoJSON file', 3000); }
@@ -1902,8 +1938,52 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+/* ─── Theme switch ───────────────────────────────────────────────────────── */
+const STYLE_DARK  = 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
+const STYLE_PAPER = 'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json';
+const _CUSTOM_SRCS = ['countries','disputed','graticule-lines','aoi','aoi-bbox','preview'];
+const _CUSTOM_LYRS = ['countries-fill','countries-line','disputed-fill','disputed-line',
+                      'graticule-lines','aoi-fill','aoi-line','aoi-bbox-line','preview-fill','preview-line'];
+
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-btn]').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.themeBtn === t)));
+  localStorage.setItem('bboxer_theme', t);
+
+  map.setStyle(t === 'paper' ? STYLE_PAPER : STYLE_DARK, {
+    transformStyle: (prev, next) => {
+      const srcs = {};
+      _CUSTOM_SRCS.forEach(id => { if (prev.sources[id]) srcs[id] = prev.sources[id]; });
+      const lyrs = (prev.layers || []).filter(l => _CUSTOM_LYRS.includes(l.id));
+      return { ...next, sources: { ...next.sources, ...srcs }, layers: [...next.layers, ...lyrs] };
+    }
+  });
+
+  map.once('style.load', () => {
+    if (_currentAoiFC) map.getSource('aoi')?.setData(_currentAoiFC);
+    if (currentBbox)   map.getSource('aoi-bbox')?.setData(bboxToFC(currentBbox));
+    if (_countriesFC)  map.getSource('countries')?.setData(_countriesFC);
+    if (_disputedFC)   map.getSource('disputed')?.setData(_disputedFC);
+    if (countryMode)   setCountriesVisible(true);
+    if (selectedId !== null)
+      map.setFeatureState({ source: 'countries', id: selectedId }, { selected: true });
+    regenerateGraticule();
+  });
+}
+
+document.querySelectorAll('[data-theme-btn]').forEach(b =>
+  b.addEventListener('click', () => setTheme(b.dataset.themeBtn)));
+
+(function () {
+  const saved = localStorage.getItem('bboxer_theme');
+  if (saved === 'paper') setTheme('paper');
+}());
+
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 function emptyFC() { return { type:'FeatureCollection', features:[] }; }
+
+function setAoiData(fc) { _currentAoiFC = fc; map.getSource('aoi')?.setData(fc); }
 
 function toBbox(lng1, lat1, lng2, lat2) {
   return [Math.min(lng1,lng2), Math.min(lat1,lat2), Math.max(lng1,lng2), Math.max(lat1,lat2)];
@@ -1959,7 +2039,7 @@ function hideLoader() { document.getElementById('loader').classList.remove('visi
 /* Called by the tour to demo the Country Picker step */
 function tourSelectDemoCountry() {
   var france = [-5.1, 42.3, 8.2, 51.1];
-  map.getSource('aoi')?.setData(bboxToFC(france));
+  setAoiData(bboxToFC(france));
   commitBbox(france, 'France', 'country');
   map.fitBounds([[france[0], france[1]], [france[2], france[3]]], { padding: 60, duration: 600 });
 }
@@ -1967,7 +2047,7 @@ function tourSelectDemoCountry() {
 /* Called by the tour when it needs to demo the Coordinates panel */
 function tourDrawDemoBbox() {
   var demo = [-10, 36, 42, 65]; /* Western Europe — fallback if no country was picked */
-  map.getSource('aoi')?.setData(bboxToFC(demo));
+  setAoiData(bboxToFC(demo));
   commitBbox(demo, 'Demo — Europe', 'bbox');
   map.fitBounds([[demo[0], demo[1]], [demo[2], demo[3]]], { padding: 60, duration: 600 });
 }
@@ -2023,9 +2103,6 @@ function tourDrawDemoBbox() {
     <button class="tc-btn tc-next" id="btn-tour-next">NEXT →</button>
   </div>
 </div>
-
-<!-- Help / replay button -->
-<button id="tour-help" class="th-hidden" title="Replay tour">?</button>
 
 <script>
 /* ─── Tour ─────────────────────────────────────────────────────────────────── */
