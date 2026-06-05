@@ -5,21 +5,24 @@
 A zero-build, single-page web tool for the recurring pain point of grabbing the
 coordinates of a bounding box or area of interest. Live on GitHub Pages.
 
-👉 **[Open BBoxer](https://pmuguda.github.io/bboxer/)**
+**[Open BBoxer](https://pmuguda.github.io/bboxer/)**
 
-![BBoxer](https://img.shields.io/badge/map-MapLibre%20GL-3fb950) ![EPSG](https://img.shields.io/badge/CRS-EPSG%3A4326%20%2B%20any-d29922)
+[![GitHub Pages](https://github.com/pmuguda/bboxer/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/pmuguda/bboxer/actions/workflows/pages/pages-build-deployment)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![MapLibre GL JS](https://img.shields.io/badge/map-MapLibre%20GL%20JS-3fb950)](https://maplibre.org/)
+[![CRS](https://img.shields.io/badge/CRS-EPSG%3A4326%20%2B%20any-d29922)](https://epsg.io/)
 
 ## Features
 
-- 🗺️ **Dark CARTO basemap** (same clean 2D style as the Equi7Grid Explorer)
-- ✏️ **Draw a BBox** — click & drag a rectangle
-- ⬡ **Draw a Polygon** — click vertices, double-click to close (bbox derived)
-- 📤 **Upload GeoJSON** — renders the geometry and computes its bbox
-- 🌍 **Country picker** — toggle on, hover to highlight, click to snap a bbox around any country
-- 🧭 **EPSG transform** — defaults to **EPSG:4326**; type any EPSG code (e.g. `32633`, `3857`) for an on-the-fly reprojection of the bbox corners
-- 📋 **One-click copy** in multiple formats: array `[W,S,E,N]`, CSV, Python list, GDAL `-te`, and WKT polygon
-- 🎚️ **Precision slider** — 0–8 decimal places
-- ⌨️ **Esc** cancels any active draw / picker mode
+- Dark / Paper CARTO basemap with live theme toggle
+- Draw a bounding box — click and drag a rectangle
+- Draw a polygon — click vertices, double-click to close (bbox derived)
+- Upload GeoJSON — renders the geometry and computes its bbox
+- Country picker — hover to highlight, click to snap a bbox around any country
+- EPSG transform — defaults to EPSG:4326; type any EPSG code (e.g. `32633`, `3857`) for on-the-fly reprojection
+- One-click copy in multiple formats: array `[W,S,E,N]`, CSV, Python list, GDAL `-te`, and WKT polygon
+- Precision slider — 0 to 8 decimal places
+- Esc cancels any active draw or picker mode
 
 ## Coordinate formats
 
@@ -39,8 +42,6 @@ coordinates of a bounding box or area of interest. Live on GitHub Pages.
 
 ## Run locally
 
-Just open `index.html`, or serve the folder:
-
 ```bash
 python3 -m http.server 8000
 # then visit http://localhost:8000
@@ -48,9 +49,10 @@ python3 -m http.server 8000
 
 ## License
 
-MIT — made by [Pavan Muguda](https://pmuguda.github.io)
+MIT — made by [Pavan Muguda Sanjeevamurthy](https://pmuguda.github.io)
 
 ## Acknowledgements
-This project was developed with AI assistance (Claude by Anthropic) for code 
-generation and debugging. Architecture decisions, refinements, and 
-ongoing maintenance are made by me.
+
+This project was developed with AI assistance (Claude by Anthropic) for code
+generation and debugging. Architecture decisions, refinements, and ongoing
+maintenance are made by me.
