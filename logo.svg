@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!-- background -->
+  <rect width="400" height="400" fill="#1b2031"/>
+
+  <!-- dashed bounding box -->
+  <rect x="88" y="118" width="224" height="164"
+        fill="none" stroke="#e8b84b" stroke-width="2.5"
+        stroke-dasharray="11 5" stroke-linecap="square"/>
+
+  <!-- corner handles -->
+  <rect x="78"  y="108" width="20" height="20" fill="#e8b84b"/>
+  <rect x="302" y="108" width="20" height="20" fill="#e8b84b"/>
+  <rect x="78"  y="272" width="20" height="20" fill="#e8b84b"/>
+  <rect x="302" y="272" width="20" height="20" fill="#e8b84b"/>
+
+  <!-- monogram -->
+  <text x="200" y="221"
+        font-family="'IBM Plex Mono', ui-monospace, monospace"
+        font-size="80" font-weight="600" letter-spacing="-2"
+        fill="#e8b84b"
+        text-anchor="middle" dominant-baseline="middle">BB</text>
+</svg>
