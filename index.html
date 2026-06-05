@@ -148,12 +148,9 @@
       flex-shrink: 0;
     }
     .logo-mark {
-      width: 40px; height: 40px; flex-shrink: 0;
-      border: 1px solid var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 600; font-size: 11px; letter-spacing: 0.06em;
-      color: var(--accent); user-select: none; font-family: var(--font-mono);
+      width: 40px; height: 40px; flex-shrink: 0; overflow: hidden;
     }
+    .logo-mark img { width: 40px; height: 40px; display: block; }
     .sidebar-header > div:nth-child(2) { flex: 1; min-width: 0; }
     .sidebar-header h1 {
       font-family: var(--font-cond); font-weight: 700; font-size: 18px;
@@ -748,7 +745,7 @@
 <!-- ═══════════════════════════════ SIDEBAR ═══════════════════════════════ -->
 <aside id="sidebar">
   <header class="sidebar-header">
-    <div class="logo-mark">BB</div>
+    <div class="logo-mark"><img src="logo.svg" alt="BBoxer"></div>
     <div>
       <h1>b<span class="header-sep">·</span>boxer</h1>
       <p>Bounding-box discovery console</p>

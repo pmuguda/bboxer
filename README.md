@@ -1,5 +1,9 @@
 # BBoxer
 
+<p align="center">
+  <img src="logo.svg" alt="BBoxer logo" width="180"/>
+</p>
+
 **Draw, snap & instantly copy AOI / bounding-box coordinates — in any EPSG.**
 
 A zero-build, single-page web tool for the recurring pain point of grabbing the
