@@ -5,7 +5,7 @@
 A zero-build, single-page web tool for the recurring pain point of grabbing the
 coordinates of a bounding box or area of interest. Live on GitHub Pages.
 
-**[Open BBoxer](https://pmuguda.github.io/bboxer/)**
+**[Open BBoxer](https://pmuguda.github.io/bboxer/)** &nbsp;·&nbsp; **[Support on Ko-fi](https://ko-fi.com/pavan_muguda)**
 
 [![GitHub Pages](https://github.com/pmuguda/bboxer/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/pmuguda/bboxer/actions/workflows/pages/pages-build-deployment)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
