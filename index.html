@@ -57,6 +57,9 @@
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css"
         crossorigin="anonymous">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -469,133 +472,209 @@
     .maplibregl-ctrl-group button:hover { background: rgba(255,255,255,0.07) !important; color: var(--text) !important; }
     .maplibregl-ctrl-scale { background: var(--surface) !important; border-color: var(--border) !important; color: var(--muted) !important; font-size: 10px !important; }
 
-    /* ── Tour ────────────────────────────────── */
+    /* ── Tour · OpenSAR-triad aesthetic ─────── */
+    /* shared design tokens scoped to tour elements */
+    #tour-welcome, #tour-card, #tour-help {
+      --tw-bg:    oklch(0.15  0.008 250);
+      --tw-bg2:   oklch(0.182 0.009 250);
+      --tw-bg3:   oklch(0.225 0.011 250);
+      --tw-ln:    oklch(0.31  0.012 250);
+      --tw-ln2:   oklch(0.42  0.014 250);
+      --tw-ink:   oklch(0.93  0.008 250);
+      --tw-ink2:  oklch(0.71  0.011 250);
+      --tw-ink3:  oklch(0.54  0.012 250);
+      --tw-acc:   oklch(0.83  0.135  82);
+      --tw-acc2:  oklch(0.83  0.135  82 / 0.14);
+      font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    }
+
+    /* ── Welcome modal ── */
     #tour-welcome {
       display: none; position: fixed; inset: 0; z-index: 9100;
-      background: rgba(0,0,0,0.82);
+      background: oklch(0 0 0 / 0.88);
       align-items: center; justify-content: center;
     }
     #tour-welcome.active { display: flex; }
-    .tw-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 16px; padding: 32px 28px;
-      max-width: 380px; width: calc(100% - 32px);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
-      text-align: center;
-    }
-    .tw-logo {
-      width: 54px; height: 54px; border-radius: 13px;
-      background: linear-gradient(135deg,#3fb950 0%,#d29922 100%);
-      font-weight: 900; font-size: 12px; color: #000;
-      margin: 0 auto 18px; display: flex; align-items: center; justify-content: center;
-    }
-    .tw-card h2 { font-size: 19px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
-    .tw-card p  { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 6px; }
-    .tw-actions { display: flex; flex-direction: column; gap: 9px; margin-top: 22px; }
-    #btn-tour-start {
-      padding: 11px; border-radius: 8px; border: none;
-      background: var(--accent); color: #000;
-      font-size: 13.5px; font-weight: 700; cursor: pointer;
-      transition: opacity 0.15s;
-    }
-    #btn-tour-start:hover { opacity: 0.88; }
-    #btn-tour-skip-intro {
-      padding: 10px; border-radius: 8px;
-      border: 1.5px solid var(--border); background: transparent;
-      color: var(--muted); font-size: 12.5px; font-weight: 600;
-      cursor: pointer; transition: all 0.15s;
-    }
-    #btn-tour-skip-intro:hover { color: var(--text); border-color: var(--muted); }
 
-    /* overlay (transparent, click-blocker) */
+    .tw-card {
+      position: relative; overflow: hidden;
+      background: var(--tw-bg2); border: 1px solid var(--tw-ln);
+      max-width: 370px; width: calc(100% - 32px);
+      box-shadow: 0 28px 64px -18px oklch(0 0 0 / 0.9);
+    }
+    /* scanline texture */
+    .tw-card::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent 0 3px, oklch(1 0 0 / .007) 3px 4px);
+    }
+    .tw-card > * { position: relative; z-index: 1; }
+
+    .tw-hd {
+      display: flex; align-items: center; gap: 13px;
+      padding: 16px 20px 15px; border-bottom: 1px solid var(--tw-ln);
+    }
+    .tw-mark {
+      width: 42px; height: 42px; flex-shrink: 0;
+      border: 1px solid var(--tw-acc);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 600; font-size: 10.5px; letter-spacing: .06em;
+      color: var(--tw-acc);
+    }
+    .tw-wordmark {
+      font-family: 'IBM Plex Sans Condensed', 'IBM Plex Mono', sans-serif;
+      font-weight: 700; font-size: 18px; letter-spacing: .02em;
+      color: var(--tw-ink); line-height: 1;
+      display: flex; align-items: baseline; gap: .1em;
+    }
+    .tw-sep { color: var(--tw-acc); font-weight: 600; }
+    .tw-sub {
+      margin-top: 5px; font-size: 9px; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--tw-ink3);
+    }
+    .tw-bd { padding: 18px 20px 20px; }
+    .tw-mod-h {
+      display: flex; align-items: center; gap: 9px; margin-bottom: 13px;
+      font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--tw-ink3);
+    }
+    .tw-mod-h .ix { color: var(--tw-acc); font-weight: 600; }
+    .tw-mod-h .rule { flex: 1; height: 1px; background: var(--tw-ln); }
+    .tw-desc {
+      font-size: 11.5px; letter-spacing: .015em; color: var(--tw-ink2);
+      line-height: 1.72; margin-bottom: 20px;
+    }
+    .tw-desc strong { color: var(--tw-ink); font-weight: 500; }
+    .tw-actions { display: flex; flex-direction: column; }
+    #btn-tour-start {
+      height: 42px; background: var(--tw-bg3);
+      border: 1px solid var(--tw-ln2);
+      color: var(--tw-ink); font-family: inherit;
+      font-size: 10.5px; letter-spacing: .15em; text-transform: uppercase;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 10px; transition: border-color .15s, color .15s, background .15s;
+    }
+    #btn-tour-start:hover {
+      border-color: var(--tw-acc); color: var(--tw-acc); background: var(--tw-acc2);
+    }
+    #btn-tour-skip-intro {
+      height: 36px; background: transparent;
+      border: 1px solid var(--tw-ln); border-top: none;
+      color: var(--tw-ink3); font-family: inherit;
+      font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: color .15s;
+    }
+    #btn-tour-skip-intro:hover { color: var(--tw-ink2); }
+
+    /* ── Step overlay ── */
     #tour-overlay {
       display: none; position: fixed; inset: 0; z-index: 9000;
       pointer-events: all; background: transparent;
     }
-    #tour-overlay.active { display: block; }
-    #tour-overlay.dark-bg { background: rgba(0,0,0,0.78); }
+    #tour-overlay.active  { display: block; }
+    #tour-overlay.dark-bg { background: oklch(0 0 0 / 0.82); }
 
-    /* spotlight "hole" — box-shadow creates the dark surround */
+    /* spotlight hole — box-shadow forms the dark surround */
     #tour-spot {
       display: none; position: fixed; z-index: 9001;
-      pointer-events: none; border-radius: 8px;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.78);
-      outline: 2px solid rgba(63,185,80,0.65);
-      outline-offset: 1px;
-      transition: left 0.28s ease, top 0.28s ease,
-                  width 0.28s ease, height 0.28s ease,
-                  border-radius 0.18s ease;
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px oklch(0 0 0 / 0.82);
+      outline: 1.5px solid oklch(0.83 0.135 82 / 0.7);
+      outline-offset: 2px;
+      transition: left .3s cubic-bezier(.4,0,.1,1), top .3s cubic-bezier(.4,0,.1,1),
+                  width .3s cubic-bezier(.4,0,.1,1), height .3s cubic-bezier(.4,0,.1,1);
     }
     #tour-spot.active { display: block; }
 
-    /* tour card */
+    /* ── Step card ── */
     #tour-card {
       display: none; position: fixed; z-index: 9002;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 18px 18px 14px;
-      width: 286px;
-      box-shadow: 0 8px 36px rgba(0,0,0,0.55), 0 0 0 1px rgba(63,185,80,0.08);
+      background: var(--tw-bg2); border: 1px solid var(--tw-ln);
+      width: 304px; overflow: hidden;
+      box-shadow: 0 22px 54px -16px oklch(0 0 0 / 0.88);
     }
-    #tour-card.active { display: block; }
+    #tour-card::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent 0 3px, oklch(1 0 0 / .006) 3px 4px);
+    }
+    #tour-card > * { position: relative; z-index: 1; }
+    #tour-card.active  { display: block; }
     #tour-card.tc-center {
       top: 50% !important; left: 50% !important;
-      transform: translate(-50%,-50%);
+      transform: translate(-50%, -50%);
     }
+
+    /* module-style header */
     .tc-head {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 11px;
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 13px 8px; border-bottom: 1px solid var(--tw-ln);
+      font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--tw-ink3);
     }
-    .tc-step-lbl {
-      font-size: 10px; font-weight: 700; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.07em;
-    }
+    .tc-ix  { color: var(--tw-acc); font-weight: 600; }
+    .tc-lbl { color: var(--tw-ink3); }
+    .tc-head .rule { flex: 1; height: 1px; background: var(--tw-ln); }
     #btn-tour-exit {
-      font-size: 10.5px; color: var(--muted); background: none; border: none;
-      cursor: pointer; padding: 0; transition: color 0.15s;
+      background: none; border: none; cursor: pointer; padding: 0;
+      color: var(--tw-ink3); font-family: inherit;
+      font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+      transition: color .15s;
     }
-    #btn-tour-exit:hover { color: var(--text); }
+    #btn-tour-exit:hover { color: var(--tw-ink); }
+
+    /* body */
+    .tc-bw { padding: 14px 16px 15px; }
     .tc-title {
-      font-size: 14.5px; font-weight: 700; color: var(--text);
-      margin-bottom: 7px; line-height: 1.3;
+      font-family: 'IBM Plex Sans Condensed', 'IBM Plex Mono', sans-serif;
+      font-weight: 700; font-size: 15px; letter-spacing: .02em;
+      color: var(--tw-ink); margin-bottom: 9px; line-height: 1.25;
     }
     .tc-body {
-      font-size: 12.5px; color: var(--muted); line-height: 1.65;
-      margin-bottom: 15px;
+      font-size: 11px; letter-spacing: .02em; line-height: 1.72;
+      color: var(--tw-ink2);
     }
+
+    /* footer nav */
     .tc-foot {
-      display: flex; align-items: center; justify-content: space-between;
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: stretch; border-top: 1px solid var(--tw-ln);
     }
     .tc-btn {
-      padding: 5px 13px; border-radius: 6px;
-      border: 1.5px solid var(--border); background: transparent;
-      color: var(--muted); font-size: 11.5px; font-weight: 600;
-      cursor: pointer; transition: all 0.15s;
+      height: 34px; background: transparent; border: none;
+      color: var(--tw-ink3); font-family: inherit;
+      font-size: 9.5px; letter-spacing: .13em; text-transform: uppercase;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: color .15s, background .15s;
     }
-    .tc-btn:hover { color: var(--text); border-color: var(--muted); }
-    .tc-btn:disabled { opacity: 0.3; pointer-events: none; }
-    .tc-btn.tc-next {
-      border-color: rgba(63,185,80,0.5); color: var(--accent);
-      background: rgba(63,185,80,0.07);
-    }
-    .tc-btn.tc-next:hover { background: rgba(63,185,80,0.14); border-color: var(--accent); }
-    .tc-dots { display: flex; gap: 4px; align-items: center; }
-    .tc-dot {
-      height: 5px; border-radius: 3px; background: var(--border);
-      transition: background 0.2s, width 0.2s;
-      width: 5px;
-    }
-    .tc-dot.active { background: var(--accent); width: 14px; }
+    .tc-btn:hover:not(:disabled) { color: var(--tw-acc); background: var(--tw-acc2); }
+    .tc-btn:disabled { opacity: 0.25; pointer-events: none; }
+    #btn-tour-prev { border-right: 1px solid var(--tw-ln); }
+    .tc-next        { border-left:  1px solid var(--tw-ln); }
 
-    /* help/replay button */
+    /* progress dots (centre of footer) */
+    .tc-dots { display: flex; gap: 3px; align-items: center; padding: 0 10px; }
+    .tc-dot {
+      width: 4px; height: 4px; background: var(--tw-ln2);
+      transition: background .2s, width .2s;
+    }
+    .tc-dot.active { background: var(--tw-acc); width: 10px; }
+
+    /* ── Help / replay button ── */
     #tour-help {
       position: fixed; bottom: 90px; right: 10px; z-index: 8999;
-      width: 33px; height: 33px; border-radius: 50%;
-      background: var(--surface); border: 1.5px solid var(--border);
-      color: var(--muted); font-size: 14px; font-weight: 700;
+      width: 32px; height: 32px;
+      background: oklch(0.182 0.009 250); border: 1px solid oklch(0.31 0.012 250);
+      color: oklch(0.71 0.011 250); font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px; font-weight: 600;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.35); transition: all 0.15s;
+      box-shadow: 0 10px 28px -8px oklch(0 0 0 / 0.7);
+      transition: border-color .15s, color .15s;
     }
-    #tour-help:hover { border-color: var(--accent); color: var(--accent); }
+    #tour-help:hover {
+      border-color: oklch(0.83 0.135 82); color: oklch(0.83 0.135 82);
+    }
     #tour-help.th-hidden { display: none; }
   </style>
 </head>
@@ -1850,13 +1929,26 @@ function tourDrawDemoBbox() {
 <!-- Welcome modal -->
 <div id="tour-welcome">
   <div class="tw-card">
-    <div class="tw-logo">BB</div>
-    <h2>Welcome to BBoxer</h2>
-    <p>Draw, snap &amp; copy bounding-box coordinates in any CRS — right in the browser, no sign-up needed.</p>
-    <p>Want a quick tour of the interface?</p>
-    <div class="tw-actions">
-      <button id="btn-tour-start">Take the Tour</button>
-      <button id="btn-tour-skip-intro">Skip — I know what I'm doing</button>
+    <div class="tw-hd">
+      <div class="tw-mark">BB</div>
+      <div>
+        <div class="tw-wordmark">B<span class="tw-sep">·</span>Boxer</div>
+        <div class="tw-sub">Bounding-box discovery console</div>
+      </div>
+    </div>
+    <div class="tw-bd">
+      <div class="tw-mod-h">
+        <span class="ix">00</span><span>Welcome</span><span class="rule"></span>
+      </div>
+      <div class="tw-desc">
+        <strong>Draw, snap &amp; copy</strong> bounding-box coordinates in any
+        CRS — right in the browser, no sign-up needed.<br><br>
+        Want a quick tour of the interface?
+      </div>
+      <div class="tw-actions">
+        <button id="btn-tour-start">→&nbsp;&nbsp;Take the Tour</button>
+        <button id="btn-tour-skip-intro">Skip · I know what I'm doing</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1866,15 +1958,20 @@ function tourDrawDemoBbox() {
 <div id="tour-spot"></div>
 <div id="tour-card">
   <div class="tc-head">
-    <span class="tc-step-lbl" id="tc-step-lbl">Step 1 of 10</span>
-    <button id="btn-tour-exit">✕ Exit tour</button>
+    <span class="tc-ix" id="tc-ix">01</span>
+    <span>·</span>
+    <span class="tc-lbl" id="tc-step-lbl">TOOLBAR</span>
+    <span class="rule"></span>
+    <button id="btn-tour-exit">✕ EXIT</button>
   </div>
-  <div class="tc-title" id="tc-title"></div>
-  <div class="tc-body" id="tc-body"></div>
+  <div class="tc-bw">
+    <div class="tc-title" id="tc-title"></div>
+    <div class="tc-body" id="tc-body"></div>
+  </div>
   <div class="tc-foot">
-    <button class="tc-btn" id="btn-tour-prev" disabled>← Back</button>
+    <button class="tc-btn" id="btn-tour-prev" disabled>← BACK</button>
     <div class="tc-dots" id="tc-dots"></div>
-    <button class="tc-btn tc-next" id="btn-tour-next">Next →</button>
+    <button class="tc-btn tc-next" id="btn-tour-next">NEXT →</button>
   </div>
 </div>
 
@@ -1890,30 +1987,35 @@ function tourDrawDemoBbox() {
   const STEPS = [
     {
       target: '#aoi-toolbar',
+      short: 'TOOLBAR',
       title: 'Drawing Toolbar',
       body: 'This floating toolbar gives you four ways to define your Area of Interest. Let\'s walk through each tool.',
       pos: 'left',
     },
     {
       target: '#tb-bbox',
+      short: 'BBOX DRAW',
       title: 'Draw Bounding Box',
       body: 'Click this button, then click-drag on the map to draw a rectangle. Release to confirm. Press Esc to cancel at any time.',
       pos: 'left',
     },
     {
       target: '#tb-poly',
+      short: 'POLYGON',
       title: 'Draw Polygon',
       body: 'Click to place polygon vertices one by one on the map. Double-click to close the shape. BBoxer computes the minimum bounding rectangle around it.',
       pos: 'left',
     },
     {
       targetFn: function () { return document.querySelector('#aoi-toolbar label.tb-btn'); },
+      short: 'UPLOAD',
       title: 'Upload GeoJSON',
       body: 'Click to load a .geojson or .json file from your computer. BBoxer automatically extracts the bounding box of any valid GeoJSON geometry.',
       pos: 'left',
     },
     {
       target: '#tb-country',
+      short: 'COUNTRIES',
       title: 'Country Picker',
       body: 'Toggles country mode on the map. Hover over any country to highlight it, then click to snap the bbox to that country\'s full extent — like France here!',
       pos: 'left',
@@ -1926,18 +2028,21 @@ function tourDrawDemoBbox() {
     },
     {
       target: '#tb-clear',
+      short: 'CLEAR',
       title: 'Clear All',
       body: 'Removes all drawn shapes and resets the coordinates panel so you can start fresh.',
       pos: 'left',
     },
     {
       targetFn: function () { return document.querySelectorAll('#sidebar .panel-section')[0]; },
+      short: 'CRS',
       title: 'Coordinate Reference System',
       body: 'BBoxer always works in WGS84 (EPSG:4326) by default. Type any EPSG code — e.g. 32633 for UTM Zone 33N — to also receive coordinates projected into that CRS.',
       pos: 'right',
     },
     {
       targetFn: function () { return document.querySelectorAll('#sidebar .panel-section')[1]; },
+      short: 'CTRY MODE',
       title: 'Country Mode Toggle',
       body: 'Another way to enable country mode. The ⓘ button explains how disputed regions like Kashmir, Crimea, and Western Sahara are handled in the dataset.',
       pos: 'right',
@@ -1947,6 +2052,7 @@ function tourDrawDemoBbox() {
         var el = document.getElementById('coords-section');
         return (el && el.classList.contains('visible')) ? el : null;
       },
+      short: 'COORDS',
       onEnter: function () {
         if (!document.getElementById('coords-section').classList.contains('visible')) {
           tourDemoDrawn = true;
@@ -1959,6 +2065,7 @@ function tourDrawDemoBbox() {
     },
     {
       target: '#sidebar-toggle',
+      short: 'SIDEBAR',
       title: 'Sidebar Toggle',
       body: 'Need more map space? Click this tab to collapse or expand the sidebar at any time.',
       pos: 'right',
@@ -1973,6 +2080,7 @@ function tourDrawDemoBbox() {
   var elOverlay  = document.getElementById('tour-overlay');
   var elSpot     = document.getElementById('tour-spot');
   var elCard     = document.getElementById('tour-card');
+  var elStepIx   = document.getElementById('tc-ix');
   var elStepLbl  = document.getElementById('tc-step-lbl');
   var elTitle    = document.getElementById('tc-title');
   var elBody     = document.getElementById('tc-body');
@@ -2014,12 +2122,10 @@ function tourDrawDemoBbox() {
     }
     var PAD = 6;
     var r = el.getBoundingClientRect();
-    var cs = window.getComputedStyle(el);
     elSpot.style.left   = (r.left - PAD) + 'px';
     elSpot.style.top    = (r.top  - PAD) + 'px';
     elSpot.style.width  = (r.width  + PAD * 2) + 'px';
     elSpot.style.height = (r.height + PAD * 2) + 'px';
-    elSpot.style.borderRadius = cs.borderRadius || '8px';
     elSpot.classList.add('active');
   }
 
@@ -2034,7 +2140,7 @@ function tourDrawDemoBbox() {
     }
 
     var MARGIN = 14;
-    var CW = 286;
+    var CW = 304;
     var r  = el.getBoundingClientRect();
     var vw = window.innerWidth;
     var vh = window.innerHeight;
@@ -2062,13 +2168,14 @@ function tourDrawDemoBbox() {
     var step = STEPS[idx];
     var total = STEPS.length;
 
-    elStepLbl.textContent = 'Step ' + (idx + 1) + ' of ' + total;
+    elStepIx.textContent  = String(idx + 1).padStart(2, '0');
+    elStepLbl.textContent = step.short || step.title.toUpperCase().slice(0, 12);
     elTitle.textContent   = step.title;
     elBody.textContent    = step.body;
 
     btnPrev.disabled = (idx === 0);
     var isLast = (idx === total - 1);
-    btnNext.textContent = isLast ? 'Done ✓' : 'Next →';
+    btnNext.textContent = isLast ? 'DONE ✓' : 'NEXT →';
 
     elCard.classList.add('active');
     updateDots();
