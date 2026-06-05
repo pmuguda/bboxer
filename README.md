@@ -35,10 +35,21 @@ coordinates of a bounding box or area of interest. Live on GitHub Pages.
 
 ## How it works
 
-- [MapLibre GL JS](https://maplibre.org/) for the map
-- [proj4js](http://proj4js.org/) for CRS transforms (definitions fetched on demand from [epsg.io](https://epsg.io))
-- [world-atlas](https://github.com/topojson/world-atlas) (110m) + [topojson-client](https://github.com/topojson/topojson-client) for the country picker
-- All client-side — no backend, no build step
+All client-side — no backend, no build step.
+
+| Library | Version | Purpose | License |
+|---------|---------|---------|---------|
+| [MapLibre GL JS](https://maplibre.org/) | 5.24.0 | Interactive map rendering | BSD-3-Clause |
+| [proj4js](http://proj4js.org/) | 2.15.0 | Client-side CRS / EPSG reprojection | MIT |
+| [topojson-client](https://github.com/topojson/topojson-client) | 3.1.0 | TopoJSON to GeoJSON conversion | ISC |
+| [world-atlas](https://github.com/topojson/world-atlas) | 2 | 110 m country boundary TopoJSON | BSD-3-Clause |
+| [IBM Plex Mono / Sans Condensed](https://github.com/IBM/plex) | — | UI typefaces (via Google Fonts) | SIL OFL 1.1 |
+
+**Data sources**
+
+- [CARTO Basemaps](https://carto.com/basemaps/) — Dark Matter and Positron tile styles (free tier, attribution required)
+- [epsg.io](https://epsg.io/) — proj4 CRS definitions fetched on demand
+- [Natural Earth](https://www.naturalearthdata.com/) — 50 m breakaway / disputed area boundaries (public domain), via [nvkelso/natural-earth-vector](https://github.com/nvkelso/natural-earth-vector)
 
 ## Run locally
 
@@ -53,6 +64,5 @@ MIT — made by [Pavan Muguda Sanjeevamurthy](https://pmuguda.github.io)
 
 ## Acknowledgements
 
-This project was developed with AI assistance (Claude by Anthropic) for code
-generation and debugging. Architecture decisions, refinements, and ongoing
-maintenance are made by me.
+Developed with AI assistance (Claude by Anthropic) for code generation and debugging.
+Architecture decisions, refinements, and ongoing maintenance by Pavan Muguda Sanjeevamurthy.
