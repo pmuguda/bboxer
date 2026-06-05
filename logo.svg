@@ -2,6 +2,38 @@
   <!-- background -->
   <rect width="400" height="400" fill="#1b2031"/>
 
+  <!-- graticule — 30° grid (equirectangular) -->
+  <g stroke="#e8b84b" stroke-width="0.75" fill="none">
+    <!-- regular lon lines -->
+    <g opacity="0.18">
+      <line x1="33.3"  y1="0" x2="33.3"  y2="400"/>
+      <line x1="66.7"  y1="0" x2="66.7"  y2="400"/>
+      <line x1="100"   y1="0" x2="100"   y2="400"/>
+      <line x1="133.3" y1="0" x2="133.3" y2="400"/>
+      <line x1="166.7" y1="0" x2="166.7" y2="400"/>
+      <line x1="233.3" y1="0" x2="233.3" y2="400"/>
+      <line x1="266.7" y1="0" x2="266.7" y2="400"/>
+      <line x1="300"   y1="0" x2="300"   y2="400"/>
+      <line x1="333.3" y1="0" x2="333.3" y2="400"/>
+      <line x1="366.7" y1="0" x2="366.7" y2="400"/>
+    </g>
+    <!-- regular lat lines -->
+    <g opacity="0.18">
+      <line x1="0" y1="66.7"  x2="400" y2="66.7"/>
+      <line x1="0" y1="133.3" x2="400" y2="133.3"/>
+      <line x1="0" y1="266.7" x2="400" y2="266.7"/>
+      <line x1="0" y1="333.3" x2="400" y2="333.3"/>
+    </g>
+    <!-- equator + prime meridian — slightly brighter -->
+    <g opacity="0.35">
+      <line x1="0"   y1="200" x2="400" y2="200"/>
+      <line x1="200" y1="0"   x2="200" y2="400"/>
+    </g>
+  </g>
+
+  <!-- bbox fill — slight tint to lift it off the grid -->
+  <rect x="88" y="118" width="224" height="164" fill="#1b2031" opacity="0.55"/>
+
   <!-- dashed bounding box -->
   <rect x="88" y="118" width="224" height="164"
         fill="none" stroke="#e8b84b" stroke-width="2.5"
