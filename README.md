@@ -13,8 +13,21 @@ coordinates of a bounding box or area of interest. Live on GitHub Pages.
 
 [![GitHub Pages](https://github.com/pmuguda/bboxer/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/pmuguda/bboxer/actions/workflows/pages/pages-build-deployment)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![PWA](https://img.shields.io/badge/PWA-installable-4c9be8)](https://pmuguda.github.io/bboxer/)
 [![MapLibre GL JS](https://img.shields.io/badge/map-MapLibre%20GL%20JS-3fb950)](https://maplibre.org/)
 [![CRS](https://img.shields.io/badge/CRS-EPSG%3A4326%20%2B%20any-d29922)](https://epsg.io/)
+
+## Install as an app
+
+BBoxer is a [Progressive Web App](https://web.dev/progressive-web-apps/) — no store, no download required.
+
+| Platform | How to install |
+|----------|---------------|
+| Chrome / Edge (desktop) | Click the install icon (⊕) in the address bar after opening the site |
+| Android Chrome | Tap the "Add to Home Screen" banner or use the browser menu |
+| iOS Safari | Tap Share → Add to Home Screen |
+
+Once installed it opens as a standalone window, launches from your taskbar or home screen, and loads instantly on repeat visits (app shell is cached; map tiles still need a connection).
 
 ## Features
 
@@ -61,6 +74,8 @@ All client-side — no backend, no build step.
 python3 -m http.server 8000
 # then visit http://localhost:8000
 ```
+
+The service worker registers only on `localhost` or HTTPS, so PWA install is available locally out of the box.
 
 ## License
 
